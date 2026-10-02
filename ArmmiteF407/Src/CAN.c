@@ -192,7 +192,7 @@ void cmd_can(void) {
 
 
     	 ret = findvar(argv[10], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for ret");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"ret");
 
     	 if((HAL_CAN_GetTxMailboxesFreeLevel(&hcan))>0){
     		// PIntH(id);MMPrintString(" txBuffer FREE \r\n");
@@ -245,19 +245,19 @@ void cmd_can(void) {
     	 fifo=getint(argv[0],0,1);
     	 // get the  variables
     	 id = findvar(argv[2], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for id");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"id");
     	 eid = findvar(argv[4], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for eid");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"eid");
     	 rtr = findvar(argv[6], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for rtr");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"rtr");
     	 dlc = findvar(argv[8], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for dl");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"dl");
     	 msg = findvar(argv[10], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for msg");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"msg");
     	 fmi = findvar(argv[12], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for fmi");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"fmi");
     	 ret = findvar(argv[14], V_FIND);
-    	 if(!(vartbl[VarIndex].type & T_INT)) error("Invalid variable for ret");
+    	 if(!(vartbl[VarIndex].type & T_INT)) StandardErrorParamS(26,"ret");
 
     	 if (fifo==0){
     	     *ret = HAL_CAN_GetRxFifoFillLevel(&hcan, CAN_RX_FIFO0);
@@ -425,7 +425,7 @@ void cmd_can(void) {
  */
     if((p = checkstring(cmdline, "OPEN")) != NULL) {
        int prescale,seg1,seg2,sjw;
-       if (canopen) error("Already open");
+       if (canopen) StandardError(14);//error("Already open");
 
     	getargs(&p, 13, ",");
     	//getargs(&p, 5, ",");
@@ -557,5 +557,5 @@ void cmd_can(void) {
 
        return;
      }
-     error("Invalid syntax");
+    SyntaxError();//error("Invalid syntax");
  }

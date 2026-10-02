@@ -88,6 +88,7 @@ extern volatile int ConsoleTxBufHead;
 extern volatile int ConsoleTxBufTail;
 extern char *LCDList[];
 extern char LCDAttrib;
+
 extern volatile BYTE SDCardStat;
 extern volatile int keyboardseen;
 extern USBD_HandleTypeDef hUsbDeviceFS;
@@ -268,7 +269,7 @@ void cmd_sort(void){
     truesize=size;
     if(argc>=3 && *argv[2]){
         int card=parseintegerarray(argv[2],&a4int,2,1,NULL,true)-1;
-    	if(card !=size)error("Array size mismatch");
+    	if(card !=size)StandardError(13);//error("Array size mismatch");
     }
     if(argc>=5 && *argv[4])flags=getint(argv[4],0,3);
     if(argc>=7 && *argv[6])startpoint=getint(argv[6],OptionBase,size+OptionBase);
@@ -294,7 +295,7 @@ void fun_format(void) {
 	char *p, *fmt;
 	int inspec;
 	getargs(&ep, 3, ",");
-	if(argc%2 == 0) error("Invalid syntax");
+	if(argc%2 == 0) SyntaxError();//error("Invalid syntax");
 	if(argc == 3)
 		fmt = getCstring(argv[2]);
 	else
@@ -329,9 +330,9 @@ void fun_format(void) {
 void cmd_timer(void) {
 	int64_t fasttimer;
     while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++;
-    if(!*cmdline) error("Syntax");
+    if(!*cmdline) SyntaxError();
     fasttimer = (uint64_t)(getnumber(++cmdline)*1000.0);
-    if(fasttimer<0.0)error("Syntax");
+    if(fasttimer<0.0)SyntaxError();
     __HAL_TIM_DISABLE(&htim12);
     TIM12count=fasttimer>>16;
     __HAL_TIM_SET_COUNTER(&htim12,fasttimer & 0xFFFF);
@@ -387,7 +388,7 @@ void fun_epoch(void){
     {
         arg = getCstring(ep);
         getargs(&arg, 11, "-/ :");                                      // this is a macro and must be the first executable stmt in a block
-        if(!(argc == 11)) error("Syntax");
+        if(!(argc == 11)) SyntaxError();
             d = atoi(argv[0]);
             m = atoi(argv[2]);
             y = atoi(argv[4]);
@@ -430,7 +431,7 @@ void cmd_pause(void) {
     MMFLOAT f;
 
     f = getnumber(cmdline);                                         // get the pulse width
-    if(f < 0) error("Number out of bounds");
+    if(f < 0) StandardError(11);//error("Number out of bounds");
     if(f < 0.05) return;
 
     if(f < 1.5) {
@@ -479,7 +480,7 @@ void MIPS16 cmd_longString(void){
         int nbr;
         int j=0;
     	getargs(&tp, 5, (char *)",");
-        if(argc != 5)error("Argument count");
+        if(argc != 5)StandardError(2);//error("Argument count");
         j=(parseintegerarray(argv[0],&dest,1,1,NULL,true)-1)*8-1;
         q=(uint8_t *)&dest[1];
         p = getint(argv[2],OptionBase,j-OptionBase);
@@ -494,7 +495,7 @@ void MIPS16 cmd_longString(void){
         char *q= NULL;
         int i,j,nbr;
         getargs(&tp, 3, (char *)",");
-        if(argc != 3)error("Argument count");
+        if(argc != 3)StandardError(2);//error("Argument count");
         j=parseintegerarray(argv[0],&dest,1,1,NULL,true)-1;
         q=(char *)&dest[1];
         q+=dest[0];
@@ -512,7 +513,7 @@ void MIPS16 cmd_longString(void){
         char *p, *q=NULL;
         int i;
         getargs(&tp, 3, (char *)",");
-        if(argc != 3)error("Argument count");
+        if(argc != 3)StandardError(2);//error("Argument count");
         parseintegerarray(argv[0],&dest,1,1,NULL,true);
         q=(char *)&dest[1];
         trim=getint(argv[2],1,dest[0]);
@@ -529,7 +530,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i,nbr;
         getargs(&tp, 5, (char *)",");
-        if(argc != 5)error("Argument count");
+        if(argc != 5)StandardError(2);//error("Argument count");
         parseintegerarray(argv[0],&dest,1,1,NULL,true);
         q=(char *)&dest[1];
         p=(char *)getstring(argv[2]);
@@ -546,7 +547,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i,j;
         getargs(&tp, 5, ( char *)",");
-        if(argc != 5)error("Argument count");
+        if(argc != 5)StandardError(2);//error("Argument count");
         int64_t nbr=getinteger(argv[2]);
         i=nbr;
         j=parseintegerarray(argv[0],&dest,1,1,NULL,true)-1;
@@ -567,7 +568,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i,j,nbr;
         getargs(&tp, 5, (char *)",");
-        if(argc != 5)error("Argument count");
+        if(argc != 5)StandardError(2);//error("Argument count");
         j=parseintegerarray(argv[0],&dest,1,1,NULL,true)-1;
         q=(char *)&dest[1];
         parseintegerarray(argv[2],&src,2,1,NULL,false);
@@ -586,7 +587,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i,j,nbr;
         getargs(&tp, 5, (char *)",");
-        if(argc != 5)error("Argument count");
+        if(argc != 5)StandardError(2);//error("Argument count");
         j=parseintegerarray(argv[0],&dest,1,1,NULL,true)-1;
         q=(char *)&dest[1];
         parseintegerarray(argv[2],&src,2,1,NULL,false);
@@ -607,7 +608,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i,j,nbr,start;
         getargs(&tp, 7,(char *)",");
-        if(argc < 5)error("Argument count");
+        if(argc < 5)StandardError(2);//error("Argument count");
         j=parseintegerarray(argv[0],&dest,1,1,NULL,true)-1;
         q=(char *)&dest[1];
         parseintegerarray(argv[2],&src,2,1,NULL,false);
@@ -629,7 +630,7 @@ void MIPS16 cmd_longString(void){
     if(tp){
         int64_t *dest=NULL;
         getargs(&tp, 1, (char *)",");
-        if(argc != 1)error("Argument count");
+        if(argc != 1)StandardError(2);//error("Argument count");
         parseintegerarray(argv[0],&dest,1,1,NULL,true);
         dest[0]=0;
         return;
@@ -639,7 +640,7 @@ void MIPS16 cmd_longString(void){
         int64_t *dest=NULL;
         int j=0;
         getargs(&tp, 3, (char *)",");
-        if(argc != 3)error("Argument count");
+        if(argc != 3)StandardError(2);//error("Argument count");
         j=(parseintegerarray(argv[0],&dest,1,1,NULL,true)-1)*8;
         dest[0] = getint(argv[2], 0, j);
         return;
@@ -650,7 +651,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i;
         getargs(&tp, 1, (char *)",");
-        if(argc != 1)error("Argument count");
+        if(argc != 1)StandardError(2);//error("Argument count");
         parseintegerarray(argv[0],&dest,1,1,NULL,true);
         q=(char *)&dest[1];
         i=dest[0];
@@ -661,6 +662,45 @@ void MIPS16 cmd_longString(void){
         }
         return;
     }
+
+    /* Picomite version  */
+     tp = checkstring(cmdline, "PRINT");
+     if (tp)
+     {
+         int64_t *dest = NULL;
+         char *q = NULL;
+         int j, fnbr = 0;
+         bool docrlf = true;
+         getargs(&tp, 5, ",;");
+         if (argc == 5)
+             SyntaxError();
+         if (argc >= 3)
+         {
+             if (*argv[0] == '#')
+                 argv[0]++;              // check if the first arg is a file number
+             fnbr = getinteger(argv[0]); // get the number
+             parseintegerarray(argv[2], &dest, 2, 1, NULL, true);
+             if (argc == 4)
+                 if (*argv[3] == ';')
+                     docrlf = false;
+         }
+         else
+         {
+             parseintegerarray(argv[0], &dest, 1, 1, NULL, true);
+             if (argc == 2)
+                 if (*argv[1] == ';')
+                     docrlf = false;
+         }
+         q = (char *)&dest[1];
+         j = dest[0];
+         while (j--)
+         {
+             MMfputc(*q++, fnbr);
+         }
+         if (docrlf)
+             MMfputs("\2\r\n", fnbr);
+         return;
+     }
     /*
     tp = checkstring(cmdline, (char *)"PRINT");
     if(tp){
@@ -689,7 +729,7 @@ void MIPS16 cmd_longString(void){
            return;
     }
     */
-
+/*
     tp = checkstring(cmdline, (char *)"PRINT");
     if(tp){
         int64_t *dest=NULL;
@@ -697,7 +737,7 @@ void MIPS16 cmd_longString(void){
         int j, fnbr=0;
         int docrlf=true;
         getargs(&tp, 5, ",;");
-        if(argc==5)error("Syntax");
+        if(argc==5)SyntaxError();
         if(argc >= 3){
             if(*argv[0] == '#')argv[0]++;                                 // check if the first arg is a file number
             fnbr = getinteger(argv[0]);                                 // get the number
@@ -715,13 +755,14 @@ void MIPS16 cmd_longString(void){
         if(docrlf)MMfputs(( char *)"\2\r\n", fnbr);
         return;
     }
+ */
     tp = checkstring(cmdline, (char *)"LCASE");
     if(tp){
         int64_t *dest=NULL;
         char *q=NULL;
         int i;
         getargs(&tp, 1, (char *)",");
-        if(argc != 1)error("Argument count");
+        if(argc != 1)StandardError(2);//error("Argument count");
         parseintegerarray(argv[0],&dest,1,1,NULL,true);
         q=(char *)&dest[1];
         i=dest[0];
@@ -739,7 +780,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i=0,j;
         getargs(&tp, 3, (char *)",");
-        if(argc != 3)error("Argument count");
+        if(argc != 3)StandardError(2);//error("Argument count");
         j=parseintegerarray(argv[0],&dest,1,1,NULL,true);
         q=(char *)&dest[1];
         dest[0]=0;
@@ -758,7 +799,7 @@ void MIPS16 cmd_longString(void){
         char *q=NULL;
         int i=0,j,d=0,s=0;
         getargs(&tp, 3, (char *)",");
-        if(argc != 3)error("Argument count");
+        if(argc != 3)StandardError(2);//error("Argument count");
         j=parseintegerarray(argv[0],&dest,1,1,NULL,true)-1;
         q=(char *)&dest[1];
         d=dest[0];
@@ -779,11 +820,11 @@ void fun_LGetStr(void){
         int64_t *src=NULL;
         int start,nbr,j;
         getargs(&ep, 5, (char *)",");
-        if(argc != 5)error("Argument count");
+        if(argc != 5)StandardError(2);//error("Argument count");
         j=(parseintegerarray(argv[0],&src,2,1,NULL,false)-1)*8;
         start = getint(argv[2],1,j);
         nbr = getinteger(argv[4]);
-        if(nbr < 1 || nbr > MAXSTRLEN) error("Number out of bounds");
+        if(nbr < 1 || nbr > MAXSTRLEN) StandardError(11);//error("Number out of bounds");
         if(start+nbr>src[0])nbr=src[0]-start+1;
         sret = GetTempMemory(STRINGSIZE);                                       // this will last for the life of the command
         s=(char *)&src[1];
@@ -800,7 +841,7 @@ void fun_LGetByte(void){
         int64_t *src=NULL;
         int start,j;
     	getargs(&ep, 3, (char *)",");
-        if(argc != 3)error("Argument count");
+        if(argc != 3)StandardError(2);//error("Argument count");
         j=(parseintegerarray(argv[0],&src,2,1,NULL,false)-1)*8;
         s=(uint8_t *)&src[1];
         start = getint(argv[2],OptionBase,j-OptionBase);
@@ -816,19 +857,19 @@ void MIPS16 fun_LInstr(void){
         char *str=NULL;
         int slen,found=0,i,j,n;
         getargs(&ep, 5, ",");
-        if(argc <3  || argc > 5)error("Argument count");
+        if(argc <3  || argc > 5)StandardError(2);//error("Argument count");
         int64_t start;
         if(argc==5)start=getinteger(argv[4])-1;
         else start=0;
         ptr1 = findvar(argv[0], V_FIND | V_EMPTY_OK);
         if(vartbl[VarIndex].type & T_INT) {
-            if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+            if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
             if(vartbl[VarIndex].dims[0] <= 0) {      // Not an array
-                error("Argument 1 must be integer array");
+                StandardError(15);//error("Argument 1 must be integer array");
             }
             dest = (long long int *)ptr1;
             str=(char *)&dest[0];
-        } else error("Argument 1 must be integer array");
+        } else StandardError(15);//error("Argument 1 must be integer array");
         j=(vartbl[VarIndex].dims[0] - OptionBase);
         srch=getstring(argv[2]);
         slen=*srch;
@@ -855,7 +896,7 @@ void fun_LCompare(void){
     char *q=NULL;
     int d=0,s=0,found=0;
     getargs(&ep, 3, (char *)",");
-    if(argc != 3)error("Argument count");
+    if(argc != 3)StandardError(2);//error("Argument count");
     parseintegerarray(argv[0],&dest,1,1,NULL,false);
     q=(char *)&dest[1];
     d=dest[0];
@@ -876,7 +917,7 @@ void fun_LCompare(void){
 void fun_LLen(void) {
     int64_t *dest=NULL;
     getargs(&ep, 1, (char *)",");
-    if(argc != 1)error("Argument count");
+    if(argc != 1)StandardError(2);//error("Argument count");
     parseintegerarray(argv[0],&dest,1,1,NULL,false);
     iret=dest[0];
     targ = T_INT;
@@ -919,12 +960,12 @@ void MIPS16 cmd_date(void) {
 	tm=&tma;
 	int dd, mm, yy;
 	while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++;
-	if(!*cmdline) error("Syntax");
+	if(!*cmdline) SyntaxError();
 	++cmdline;
 	arg = getCstring(cmdline);
 	{
 		getargs(&arg, 5, "-/");										// this is a macro and must be the first executable stmt in a block
-		if(argc != 5) error("Syntax");
+		if(argc != 5) SyntaxError();
 		dd = atoi(argv[0]);
 		mm = atoi(argv[2]);
 		yy = atoi(argv[4]);
@@ -1001,7 +1042,7 @@ void MIPS16 fun_day(void) {
     {
         arg = getCstring(ep);
         getargs(&arg, 5, "-/");                                     // this is a macro and must be the first executable stmt in a block
-        if(!(argc == 5))error("Syntax");
+        if(!(argc == 5))SyntaxError();
         d = atoi(argv[0]);
         m = atoi(argv[2]);
         y = atoi(argv[4]);
@@ -1045,14 +1086,14 @@ void MIPS16 cmd_time(void) {
     int t=0;
     int offset;
 	while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++;
-	if(!*cmdline) error("Syntax");
+	if(!*cmdline) SyntaxError();
 	++cmdline;
     evaluate(cmdline, &f, &i64, &ss, &t, false);
 	if(t==T_STR){
 	arg = getCstring(cmdline);
 	{
 		getargs(&arg, 5, ":");								// this is a macro and must be the first executable stmt in a block
-		if(argc%2 == 0) error("Syntax");
+		if(argc%2 == 0) SyntaxError();
 		h = atoi(argv[0]);
 		if(argc >= 3) m = atoi(argv[2]);
 		if(argc == 5) s = atoi(argv[4]);
@@ -1137,7 +1178,7 @@ void cmd_settick(void){
 	int period;
 	int irq=0;;
     getargs(&cmdline, 5, ",");
-    if(!(argc == 3 || argc == 5)) error("Argument count");
+    if(!(argc == 3 || argc == 5)) StandardError(2);//error("Argument count");
     period = getint(argv[0], 0, INT_MAX);
     if(argc == 5) irq = getint(argv[4], 1, NBRSETTICKS) - 1;
     if(strcasecmp(argv[0],"PAUSE")==0){
@@ -1240,8 +1281,17 @@ void cmd_option(void) {
 
     tp = checkstring(cmdline, "AUTORUN");
     if(tp) {
-        if(checkstring(tp, "ON"))       { Option.Autorun = true; SaveOptions(); return; }
-        if(checkstring(tp, "OFF"))      { Option.Autorun = false; SaveOptions(); return;  }
+    	getargs(&tp, 3, ",");
+    	Option.NoReset = 0;
+    	if (argc == 3)
+    	{
+    	if (checkstring(argv[2], (char *)"NORESET"))
+    	    {Option.NoReset = 1; SaveOptions();}
+    	else
+            SyntaxError();
+        }
+    	if(checkstring(argv[0], "ON"))       { Option.Autorun = true; SaveOptions(); return; }
+        if(checkstring(argv[0], "OFF"))      { Option.Autorun = false; SaveOptions(); return;  }
     }
 
     tp = checkstring(cmdline, "CASE");
@@ -1261,11 +1311,11 @@ void cmd_option(void) {
     tp = checkstring(cmdline, "BAUDRATE");
     if(tp) {
         if(Option.SerialConDisabled!=0)error("Invalid with USB console");
-        //if(CurrentLinePtr) error("Invalid in a program");                    //G.A.
+        //if(CurrentLinePtr) StandardError(23);//Invalid in a program;                    //G.A.
         int i;
         i = getinteger(tp);
         if(i > PeripheralBusSpeed/17) error("Baud rate too high");
-        if(i < 100) error("Number out of bounds");
+        if(i < 100) StandardError(11);//error("Number out of bounds");
         Option.Baudrate = i;
         if(!CurrentLinePtr)SaveOptions();    // G.A.
         if(!CurrentLinePtr)MMPrintString("Restart to activate");                // set the console baud rate G.A.
@@ -1293,7 +1343,7 @@ void cmd_option(void) {
     tp = checkstring(cmdline, "DISPLAY");
     if(tp) {
             getargs(&tp, 3, (char *)",");
-            if(Option.DISPLAY_CONSOLE && argc>1 ) error("Cannot change LCD console");
+            if(Option.DISPLAY_CONSOLE && argc>0 ) error("Cannot change LCD console");
             if(argc >= 1) Option.Height = getint(argv[0], 5, 100);
             if(argc == 3) Option.Width = getint(argv[2], 37, 240);
             if (Option.DISPLAY_CONSOLE) {
@@ -1327,8 +1377,8 @@ void cmd_option(void) {
     if(tp) {
         getargs(&tp, 13, ",");
         if(str_equal(argv[0], "USER")) {
-            if(Option.DISPLAY_TYPE) error("Display already configured");
-            if(argc != 5) error("Argument count");
+            if(Option.DISPLAY_TYPE) StandardError(5);//error("Display already configured");
+            if(argc != 5) StandardError(2);//error("Argument count");
             HRes = DisplayHRes = getint(argv[2], 1, 10000);
             VRes = DisplayVRes = getint(argv[4], 1, 10000);
             Option.DISPLAY_TYPE = USER;
@@ -1441,6 +1491,21 @@ void fun_info(void){
     		targ=T_INT;
     		return;
     	}
+        tp=checkstring(ep, "DTR");
+    	   	if(tp){
+    	   	iret= CDC_Get_DTR_State() ;
+    	   	targ=T_INT;
+    	  	return;
+    	}
+
+        tp=checkstring(ep, "RTS");
+           	if(tp){
+          	iret= CDC_Get_DTR_State() ;
+           	targ=T_INT;
+       	  	return;
+       	}
+
+
         //********** OPTION option ****************************
     	tp=checkstring(ep, "OPTION");
     	if(tp){
@@ -1488,7 +1553,12 @@ void fun_info(void){
     		     targ=T_NBR;
     		     return;
 
-    		 } else error("Syntax");
+    		 } else if(checkstring(tp, "SERIAL CONSOLE")){
+    			 iret=!Option.SerialConDisabled;
+    		 	 targ=T_INT;
+    			 return;
+
+    		 } else SyntaxError();
     		 CtoM(sret);
     	     targ=T_STR;
     		 return;
@@ -1503,6 +1573,11 @@ void fun_info(void){
     	iret=100;
     	targ=T_INT;
     	return;
+     }
+     if(checkstring(ep, "HEAP")){
+         iret=FreeSpaceOnHeap();
+         targ=T_INT;
+         return;
      }
 
      tp=checkstring(ep, "PIN");
@@ -1532,7 +1607,7 @@ void fun_info(void){
             // else ("Syntax");
              pin = getinteger(tp);
              if(code)pin=codemap(code,pin);
-             if(IsInvalidPin(pin))error("Invalid pin");
+             if(IsInvalidPin(pin))StandardError(22);//Invalid pin;
              iret=pin;
              targ=T_INT;
              return;
@@ -1552,17 +1627,17 @@ void fun_info(void){
           if(t & T_STR ){
              ptr=(char *)getCstring(tp);
              strcpy(string,ptr);
-           } else {
+          } else {
              strcpy(string,(char *)tp);
-           }
-           if((code=codecheck( ( char *)string)))string+=2;
-           pin = getinteger((char *)string);
-           if(code)pin=codemap(code,pin);
-           if(IsInvalidPin(pin))error("Invalid pin");
-           targ=T_INT;
-           return;
-       }
-
+          }
+          if((code=codecheck( ( char *)string)))string+=2;
+          pin = getinteger((char *)string);
+          if(code)pin=codemap(code,pin);
+          if(IsInvalidPin(pin))StandardError(22);//Invalid pin;
+          targ=T_INT;
+          iret=pin;
+          return;
+      }
 
      if(checkstring(ep, "CPUSPEED")){
             IntToStr(sret,SystemCoreClock,10);
@@ -1709,13 +1784,18 @@ void fun_info(void){
     	 else if(_restart_reason == 0x2)strcpy((char *)sret, "MMBasic Reset");
     	 else if(_restart_reason == 0x3)strcpy((char *)sret, "CPU RESTART");
     	 else if(_restart_reason == 0x4)strcpy((char *)sret, "Watchdog");
-    	 else if(_restart_reason == 0x5)strcpy((char *)sret, "EXECUTE Timeout");
-    	 else if(_restart_reason == 0x6)strcpy((char *)sret, "HEAP Restart");
+    	 else if(_restart_reason == 0x5)strcpy((char *)sret, "Command Timeout");
+    	// else if(_restart_reason == 0x6)strcpy((char *)sret, "HEAP Restart");
+    	 else if(_restart_reason == 0x6)strcpy((char *)sret, "HardFault Restart");
+    	 else if(_restart_reason == 0x7)strcpy((char *)sret, "Error Restart");
     	 else strcpy((char *)sret, "Unknown");
 
+      } else if(checkstring(ep, "BOOTLINE")){
+    	 iret=_excep_addr;
+    	 targ=T_INT;
+    	 return;
 
-
-      } else error("Syntax");
+      } else SyntaxError();
 
       CtoM(sret);
       targ=T_STR;
@@ -1801,7 +1881,13 @@ void MIPS16 cmd_cpu(void) {
     if((p = checkstring(cmdline, "RESTART"))) {
         PRet();
         _excep_code = RESET_COMMAND;
-         while(ConsoleTxBufTail != ConsoleTxBufHead);
+         if (!CurrentLinePtr)
+             _excep_addr =0;
+         else if(CurrentLinePtr < ProgMemory + Option.ProgFlashSize)
+          	_excep_addr = CountLines(CurrentLinePtr);
+         else
+            _excep_addr = 65000;
+        while(ConsoleTxBufTail != ConsoleTxBufHead);
         uSec(10000);
         SoftReset();                                                // this will restart the processor ? only works when not in debug
     } else if((p = checkstring(cmdline, "SLEEP"))) {
@@ -1898,7 +1984,7 @@ void MIPS16 cmd_cpu(void) {
              }
 //             MMPrintString(">\r\n");
          }
-    } else error("Syntax");
+    } else SyntaxError();
 }
 
 void cmd_csubinterrupt(void){
@@ -1964,7 +2050,7 @@ void cmd_poke(void) {
 
     char *q;
     if((p = checkstring(cmdline, "DISPLAY"))){
-        if(!Option.DISPLAY_TYPE)error("Display not configured");
+        if(!Option.DISPLAY_TYPE)StandardError(4);//error("Display not configured");
         if((q=checkstring(p,"HRES"))){
             HRes=getint(q,0,1920);
         } else if((q=checkstring(p,"VRES"))){
@@ -1992,13 +2078,13 @@ void cmd_poke(void) {
             } else
             error("Display not supported");
 
-        } //error("Syntax");
-    } else {
+        } //SyntaxError();
 
+       }
 
     getargs(&cmdline, 5, ",");
     if((p = checkstring(argv[0], "BYTE"))) {
-        if(argc != 3) error("Argument count");
+        if(argc != 3) StandardError(2);//error("Argument count");
         uint32_t a=GetPokeAddr(p);
         uint8_t *padd=(uint8_t *)(a);
         *padd = getinteger(argv[2]);
@@ -2007,7 +2093,7 @@ void cmd_poke(void) {
         return;
     }
     if((p = checkstring(argv[0], "SHORT"))) {
-    	if(argc != 3) error("Argument count");
+    	if(argc != 3) StandardError(2);//error("Argument count");
     	uint32_t a=GetPokeAddr(p);
     	if(a % 2)error("Address not divisible by 2");
     	uint16_t *padd=(uint16_t *)(a);
@@ -2018,19 +2104,20 @@ void cmd_poke(void) {
     }
 
     if((p = checkstring(argv[0], "WORD"))) {
-        if(argc != 3) error("Argument count");
+    	if(argc != 3) StandardError(2);//error("Argument count");
         uint32_t a=GetPokeAddr(p);
         if(a % 4)error("Address not divisible by 4");
-        uint32_t *padd=(uint32_t *)(a);
-        *padd = getinteger(argv[2]);
-//        padd = (uint32_t *)((uint32_t)padd & 0xFFFFFFE0);
-//        SCB_CleanDCache_by_Addr((uint32_t *)padd, 32);
+         uint32_t *padd=(uint32_t *)(a);
+         *padd = getinteger(argv[2]);
+        //  padd = (uint32_t *)((uint32_t)padd & 0xFFFFFFE0);
+        // SCB_CleanDCache_by_Addr((uint32_t *)padd, 32);
         return;
     }
 
 
+
     if((p = checkstring(argv[0], "INTEGER"))) {
-        if(argc != 3) error("Argument count");
+        if(argc != 3) StandardError(2);//error("Argument count");
         uint32_t a=GetPokeAddr(p);
         if(a % 8)error("Address not divisible by 8");
         uint64_t *padd=(uint64_t *)(a);
@@ -2043,7 +2130,7 @@ void cmd_poke(void) {
 
 
     if((p = checkstring(argv[0], "FLOAT"))) {
-        if(argc != 3) error("Argument count");
+        if(argc != 3) StandardError(2);//error("Argument count");
         uint32_t a=GetPokeAddr(p);
         if(a % 8)error("Address not divisible by 8");
         MMFLOAT *padd=(MMFLOAT *)(a);
@@ -2053,7 +2140,7 @@ void cmd_poke(void) {
         return;
     }
 
-    if(argc != 5) error("Argument count");
+    if(argc != 5) StandardError(2);//error("Argument count");
 
     if(checkstring(argv[0], "VARTBL")) {
         *((char *)vartbl + (unsigned int)getinteger(argv[2])) = getinteger(argv[4]);
@@ -2061,7 +2148,7 @@ void cmd_poke(void) {
     }
     if((p = checkstring(argv[0], "VAR"))) {
         pp = findvar(p, V_FIND | V_EMPTY_OK | V_NOFIND_ERR);
-        if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+        if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
         *((char *)pp + (unsigned int)getinteger(argv[2])) = getinteger(argv[4]);
         return;
     }
@@ -2069,7 +2156,7 @@ void cmd_poke(void) {
     *(char *)(((int)getinteger(argv[0]) << 16) + (int)getinteger(argv[2])) = getinteger(argv[4]);
 }
 
-}
+//}
 
 // function to find a CFunction
 // only used by fun_peek() below
@@ -2104,14 +2191,14 @@ void fun_peek(void) {
     getargs(&ep, 3, ",");
 
     if((p = checkstring(argv[0], "BYTE"))){
-        if(argc != 1) error("Syntax");
+        if(argc != 1) SyntaxError();
         iret = *(unsigned char *)GetPeekAddr(p);
         targ = T_INT;
         return;
         }
 
     if((p = checkstring(argv[0], "VARADDR"))){
-        if(argc != 1) error("Syntax");
+        if(argc != 1) SyntaxError();
         pp = findvar(p, V_FIND | V_EMPTY_OK | V_NOFIND_ERR);
         iret = (unsigned int)pp;
         targ = T_INT;
@@ -2120,7 +2207,7 @@ void fun_peek(void) {
 
     if((p = checkstring(argv[0], "CFUNADDR"))){
     	int i,j;
-        if(argc != 1) error("Syntax");
+        if(argc != 1) SyntaxError();
         i = FindSubFun(p, true);                                    // search for a function first
         if(i == -1) i = FindSubFun(p, false);                       // and if not found try for a subroutine
         //if(i == -1 || !(*subfun[i] == cmdCSUB)) error("Invalid argument");
@@ -2136,27 +2223,27 @@ void fun_peek(void) {
     }
 
     if((p = checkstring(argv[0], "WORD"))){
-        if(argc != 1) error("Syntax");
+        if(argc != 1) SyntaxError();
         iret = *(unsigned int *)(GetPeekAddr(p) & 0b11111111111111111111111111111100);
         targ = T_INT;
         return;
         }
     if((p = checkstring(argv[0], "SHORT"))){
-        if(argc != 1) error("Syntax");
+        if(argc != 1) SyntaxError();
        // iret = *(unsigned int *)(GetPeekAddr(p) & 0b11111111111111111111111111111110);
         iret = *(unsigned short *)(GetPeekAddr(p) & 0b11111111111111111111111111111110);
         targ = T_INT;
         return;
         }
     if((p = checkstring(argv[0], "INTEGER"))){
-        if(argc != 1) error("Syntax");
+        if(argc != 1) SyntaxError();
         iret = *(uint64_t *)(GetPeekAddr(p) & 0xFFFFFFF8);
         targ = T_INT;
         return;
         }
 
     if((p = checkstring(argv[0], "FLOAT"))){
-        if(argc != 1) error("Syntax");
+        if(argc != 1) SyntaxError();
         fret = *(MMFLOAT *)(GetPeekAddr(p) & 0xFFFFFFF8);
         targ = T_NBR;
         return;
@@ -2165,7 +2252,7 @@ void fun_peek(void) {
 
 
 
-    if(argc != 3) error("Syntax");
+    if(argc != 3) SyntaxError();
 
     if((checkstring(argv[0], "PROGMEM"))){
         iret = *((char *)ProgMemory + (int)getinteger(argv[2]));
@@ -2238,15 +2325,164 @@ void MIPS16 CrunchData(char **p, int c) {
     *((*p)++) = lastch = c;
 }
 
+/* AUTOSAVE N  Implemented    */
+void MIPS16 cmd_autosave(void) {
+    char *buf, *p;
+    int c, prevc = 0, crunch = false,append = false;
+    int count = 0;
+    int noecho = 0;
+    uint64_t timeout=0;
+    if(CurrentLinePtr) StandardError(23);//Invalid in a program;
+    char *tp=(char *)checkstring(cmdline,( char *)"APPEND");
+    if(tp){
+        // ClearRuntime()  Only want to do some of this
+    	ClearVars(0);
+        CloseAudio();
+        CloseAllFiles();
+        ClearExternalIO();                                              // this MUST come before InitHeap()
+
+       // p = buf = GetMemory(EDIT_BUFFER_SIZE);
+        p = buf = GetTempMemory(EDIT_BUFFER_SIZE);
+        char * fromp  = (char *)ProgMemory;
+        p = buf;
+        while(*fromp != 0xff) {
+            if(*fromp == T_NEWLINE) {
+                fromp = ( char *)llist(( char *)p, ( char *)fromp);                                // otherwise expand the line
+                p += strlen((char *)p);
+                *p++ = '\n'; *p = 0;
+            }
+            // finally, is it the end of the program?
+            if(fromp[0] == 0 || fromp[0] == 0xff) break;
+        }
+        append=true;
+        goto readin;
+    }
+    if(*cmdline) {
+        if(toupper(*cmdline) == 'C')
+            crunch = true;
+        else if(toupper(*cmdline) == 'N')
+            noecho = true;
+        else
+            StandardError(7);//error("Unknown command");
+    }
+
+    ClearProgram();                                            // clear any leftovers from the previous program
+    p = buf = GetTempMemory(EDIT_BUFFER_SIZE);
+    CrunchData(&p, 0);                                         // initialise the crunch data subroutine
+
+readin:;
+         int first = true;
+         int skip_initial_lf = (p == buf);
+        // uint64_t lastchartime = GetuSec(); // Initialize it!
+         uint64_t lastchartime = PauseTimer=0;
+
+      while((c = MMInkey()) != 0x1a && c!=F1 && c!=F2) {         // while waiting for the end of text char
+        if(append){
+        	append=false;
+        	if( c == '\n') continue;                  // throw away an initial line feed which can follow the command
+        }else{
+       	  if(p == buf && c == '\n') continue;         // throw away an initial line feed which can follow the command
+        }
+    //////////////////////////////
+        // Check timeout even when no character received
+        // if (!first && GetuSec() - lastchartime > 100000)
+       	 if (!first && PauseTimer - lastchartime > 100)
+         {
+             if (noecho)
+             {
+                 MMPrintString("Enter ctrl-Z, F1, or F2 to exit\r\n");
+                 noecho = false;
+             }
+         }
+
+         // Early exit for no input
+         if (c == -1)
+         {
+            // if (count && GetuSec() - timeout > 100000)
+             if (count && PauseTimer - timeout > 100)
+             {
+                 count = 0;
+             }
+             continue;
+         }
+
+         // Got a valid character - update timestamp and clear first flag
+        // lastchartime = GetuSec();
+         lastchartime =PauseTimer;
+         first = false;
+
+         // Handle initial LF
+         if (skip_initial_lf && c == '\n')
+         {
+            skip_initial_lf = false;
+            continue;
+         }
+         skip_initial_lf = false;
+
+         // Buffer overflow check
+       //  if (p >= buf_limit)
+       //      StandardError(29);
 
 
+  /////////////////////
 
 
+       // if(p == buf && c == '\n') continue;                         // throw away an initial line feed which can follow the command
+        if((p - buf) >= EDIT_BUFFER_SIZE) StandardError(24);//Not enough memory;
+        if(IsPrint(c) || c == '\r' || c == '\n' || c == TAB) {
+            if(c == TAB) c = ' ';
+            if(crunch)
+                CrunchData(&p, c);                                  // insert into RAM after throwing away comments. etc
+            else
+                *p++ = c;                                           // insert the input into RAM
+
+             // Echo logic
+            int should_echo = !(c == '\n' && prevc == '\r');
+
+            if (should_echo)
+            {
+                //timeout = GetuSec();
+                timeout = PauseTimer;
+                if (!noecho)
+                    MMputchar(c);
+                 count++;
+            }
+            if (c == '\r')
+            {
+               count = 0;
+               if (!noecho)
+               {
+                  MMputchar('\n');
+
+               }
+            }
+           // {
+               // if(!(c == '\n' && prevc == '\r')) MMputchar(c);     // and echo it
+               // if(c == '\r') MMputchar('\n');
+           // }            prevc = c;
+        }
+    }
+    *p = 0;                                                         // terminate the string in RAM
+    while(getConsole() != -1);                                      // clear any rubbish in the input
+//    ClearSavedVars();                                               // clear any saved variables
+    SaveProgramToFlash(buf, true);
+    ClearVars(0);
+    if(c==F2){
+        //ClearVars(0);
+        strcpy(inpbuf,"RUN\r\n");
+        //multi=false;
+        tokenise(true);                                             // turn into executable code
+        ExecuteProgram(tknbuf);                                     // execute the line straight away
+    }
+}
+
+
+/*
 
 void MIPS16 cmd_autosave(void) {
     char *buf, *p;
     int c, prevc = 0, crunch = false,append = false;
-    if(CurrentLinePtr) error("Invalid in a program");
+    if(CurrentLinePtr) StandardError(23);//Invalid in a program;
     char *tp=(char *)checkstring(cmdline,( char *)"APPEND");
     if(tp){
         // ClearRuntime()  Only want to do some of this
@@ -2275,7 +2511,7 @@ void MIPS16 cmd_autosave(void) {
         if(toupper(*cmdline) == 'C')
             crunch = true;
         else
-            error("Unknown command");
+            StandardError(7);//error("Unknown command");
     }
 
     ClearProgram();                                            // clear any leftovers from the previous program
@@ -2290,7 +2526,7 @@ readin:
         }else{
        	  if(p == buf && c == '\n') continue;         // throw away an initial line feed which can follow the command
         }
-        if((p - buf) >= EDIT_BUFFER_SIZE) error("Not enough memory");
+        if((p - buf) >= EDIT_BUFFER_SIZE) StandardError(24);//Not enough memory;
         if(IsPrint(c) || c == '\r' || c == '\n' || c == TAB) {
             if(c == TAB) c = ' ';
             if(crunch)
@@ -2312,13 +2548,13 @@ readin:
     if(c==F2){
         //ClearVars(0);
         strcpy(inpbuf,"RUN\r\n");
-        multi=false;
+        //multi=false;
         tokenise(true);                                             // turn into executable code
         ExecuteProgram(tknbuf);                                     // execute the line straight away
     }
 }
 
-
+*/
 
 
 
@@ -2566,6 +2802,7 @@ char *GetIntAddress(char *p) {
 
     return findline(getinteger(p), true);                           // otherwise try for a line number
 }
+/*
 void *mymalloc(size_t size){
 	static int32_t heaptop=0;
 	unsigned int *a = malloc(size);
@@ -2577,6 +2814,7 @@ void *mymalloc(size_t size){
 	}
 	return a;
 }
+*/
 void MIPS16 fun_json(void){
     char *json_string=NULL;
     const cJSON *root = NULL;
@@ -2591,13 +2829,13 @@ void MIPS16 fun_json(void){
     char *a=GetTempStrMemory();
     ptr1 = findvar(argv[0], V_FIND | V_EMPTY_OK);
     if(vartbl[VarIndex].type & T_INT) {
-    if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+    if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
     if(vartbl[VarIndex].dims[0] <= 0) {		// Not an array
-        error("Argument 1 must be integer array");
+        StandardError(15);//error("Argument 1 must be integer array");
     }
     dest = (long long int *)ptr1;
     json_string=(char *)&dest[1];
-    } else error("Argument 1 must be integer array");
+    } else StandardError(15);//error("Argument 1 must be integer array");
     cJSON_InitHooks(NULL);
     cJSON * parse = cJSON_Parse(json_string);
     if(parse==NULL)error("Invalid JSON data");

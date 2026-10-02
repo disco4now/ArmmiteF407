@@ -158,7 +158,7 @@ long long int CallCFunction(char *CmdPtr, char *ArgList, char *DefP, char *Calle
     if((uint32_t)p > 0x10000000)error("Internal error");
 
     // find the C code in flash
-    if(*CmdPtr == cmdCFUN && *ArgList != '(') error("Syntax");      // check that a CFunction has an opening bracket
+    if(*CmdPtr == cmdCFUN && *ArgList != '(') SyntaxError();      // check that a CFunction has an opening bracket
     if(*ArgList == '(') ArgList++;                                  // and step over it
     p = FindCFunction((unsigned int *)CFunctionFlash, CmdPtr);      // search through the program flash looking for a match to the function being called
    //  if(*p == 0xffffffff) error("Internal fault 5(sorry)");
@@ -190,7 +190,7 @@ long long int CallCFunction(char *CmdPtr, char *ArgList, char *DefP, char *Calle
     CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
     if(*ArgList != ')') {
         getargs(&ArgList, 19, ",");                                 // expand the command line of the caller
-       // if(argc % 2 == 0) error("Syntax");
+       // if(argc % 2 == 0) SyntaxError();
         for(i = 0; i < argc; i += 2) {
             // if this is a straight variable we want to pass a pointer to its value in RAM
             if(isnamestart((uint8_t)*argv[i]) && (*skipvar(argv[i], false) == 0 || *skipvar(argv[i], false) == ')') && !(FindSubFun(argv[i], 1) >= 0 && strchr(argv[i], '(') != NULL)) {

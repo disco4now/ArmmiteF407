@@ -354,7 +354,7 @@ void cmd_play(void) {
 
     if((tp = checkstring(cmdline, "VOLUME"))) {
         getargs(&tp, 3,",");
-        if(argc < 1) error("Argument count");
+        if(argc < 1) StandardError(2);//error("Argument count");
         if(*argv[0]) vol_left = getint(argv[0], 0, 100);
         if(argc == 3) vol_right = getint(argv[2], 0, 100);
         return;
@@ -367,7 +367,7 @@ void cmd_play(void) {
         
         // get the command line arguments
         getargs(&tp, 5,",");                                       // this MUST be the first executable line in the function
-        if(!(argc == 3 || argc == 5)) error("Argument count");
+        if(!(argc == 3 || argc == 5)) StandardError(2);//error("Argument count");
 
         if(CurrentlyPlaying == P_TTS || CurrentlyPlaying == P_WAV || CurrentlyPlaying == P_PAUSE_WAV || CurrentlyPlaying == P_FLAC || CurrentlyPlaying == P_PAUSE_FLAC) error("Sound output in use");
         if(CurrentlyPlaying == P_TONE || CurrentlyPlaying == P_PAUSE_TONE) StopAudio();                 // stop the current tone
@@ -393,7 +393,7 @@ void cmd_play(void) {
         char *p;
         int i __attribute((unused))=0;
         getargs(&tp, 3,",");                                  // this MUST be the first executable line in the function
-        if(!(argc == 1 || argc == 3)) error("Argument count");
+        if(!(argc == 1 || argc == 3)) StandardError(2);//error("Argument count");
 
         if(CurrentlyPlaying != P_NOTHING) error("Sound output in use");
 
@@ -441,7 +441,7 @@ void cmd_play(void) {
         char *p;
         int i __attribute((unused))=0;
         getargs(&tp, 3,",");                                  // this MUST be the first executable line in the function
-        if(!(argc == 1 || argc == 3)) error("Argument count");
+        if(!(argc == 1 || argc == 3)) StandardError(2);//error("Argument count");
         if(CurrentlyPlaying != P_NOTHING) error("Sound output in use");
 
         if(!InitSDCard()) return;
@@ -482,7 +482,7 @@ void cmd_play(void) {
         ConfigSoundOutputs();
         return;
     }
-    error("Unknown command");
+    StandardError(7);//error("Unknown command");
 }
 
 /******************************************************************************************

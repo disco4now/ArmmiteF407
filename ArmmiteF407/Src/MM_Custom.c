@@ -150,18 +150,18 @@ static void MX_TIM6_Init(int prescale, int period)
   htim6.Init.Period = period;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
-    error("HAL_TIM_Base_Init");
+    StandardError(36);//HAL_TIM_Base_Init;
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
   {
-    error("HAL_TIMEx_MasterConfigSynchronization");
+    StandardError(37);//HAL_TIMEx_MasterConfigSynchronization;
   }
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
     /* Initialization Error */
-    error("HAL_TIM_Base_Init");
+    StandardError(36);//HAL_TIM_Base_Init;
   }
 
   /*##-2- Start the TIM Base generation in interrupt mode ####################*/
@@ -169,7 +169,7 @@ static void MX_TIM6_Init(int prescale, int period)
   if (HAL_TIM_Base_Start_IT(&htim6) != HAL_OK)
   {
     /* Starting Error */
-      error("HAL_TIM_Base_Start_IT");
+      StandardError(38);//HAL_TIM_Base_Start_IT;
   }
 }
 static void MX_TIM7_Init(int prescale, int period)
@@ -191,18 +191,18 @@ static void MX_TIM7_Init(int prescale, int period)
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
-    error("HAL_TIM_Base_Init");
+    StandardError(36);//HAL_TIM_Base_Init;
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
   {
-    error("HAL_TIMEx_MasterConfigSynchronization");
+    StandardError(37);//HAL_TIMEx_MasterConfigSynchronization;
   }
   if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
   {
     /* Initialization Error */
-    error("HAL_TIM_Base_Init");
+    StandardError(36);//HAL_TIM_Base_Init;
   }
 
   /*##-2- Start the TIM Base generation in interrupt mode ####################*/
@@ -210,7 +210,7 @@ static void MX_TIM7_Init(int prescale, int period)
   if (HAL_TIM_Base_Start_IT(&htim7) != HAL_OK)
   {
     /* Starting Error */
-      error("HAL_TIM_Base_Start_IT");
+      StandardError(38);//HAL_TIM_Base_Start_IT;
   }
 }
 
@@ -230,7 +230,7 @@ void ADCclose(void){
         if (HAL_ADC_DeInit(&hadc1) != HAL_OK)
         {
             // ADC de-initialization Error /
-            error("HAL_ADC_DeInitA");
+            StandardError(30);//HAL_ADC_DeInit;
         }
         ExtCfg(ADCchannelA, EXT_NOT_CONFIG, 0);
         }
@@ -238,7 +238,7 @@ void ADCclose(void){
         if (HAL_ADC_DeInit(&hadc3) != HAL_OK)
         {
             //* ADC de-initialization Error/
-            error("HAL_ADC_DeInitB");
+            StandardError(30);//HAL_ADC_DeInit;
         }
         ExtCfg(ADCchannelB, EXT_NOT_CONFIG, 0);
     }
@@ -246,7 +246,7 @@ void ADCclose(void){
         if (HAL_ADC_DeInit(&hadc2) != HAL_OK)
         {
             //* ADC de-initialization Error/
-            error("HAL_ADC_DeInitC");
+            StandardError(30);//HAL_ADC_DeInit;
         }
         ExtCfg(ADCchannelC, EXT_NOT_CONFIG, 0);
     }
@@ -268,7 +268,7 @@ void cmd_ADC(void){
 	tp = checkstring(cmdline, "OPEN");
 	if(tp) {
         getargs(&tp, 9, ",");
-        if(argc<3)error("Syntax");
+        if(argc<3)SyntaxError();
         if(ADCchannelA)error("ADC already open");
         memset(&sConfigA,0,sizeof(ADC_ChannelConfTypeDef));
         memset(&sConfigB,0,sizeof(ADC_ChannelConfTypeDef));
@@ -364,7 +364,7 @@ void cmd_ADC(void){
         {
             /* Channel Configuration Error */
             ADCchannelA = ADCchannelB = ADCchannelC = 0;
-            error("HAL_ADC_ConfigChannelA");
+            error("HAL_ADC_ConfigChannel");
         }
 
         if(ADCchannelB){
@@ -381,7 +381,7 @@ void cmd_ADC(void){
             {
                 /* Channel Configuration Error */
                 ADCchannelA = ADCchannelB = ADCchannelC = 0;
-                error("HAL_ADC_ConfigChannelB");
+                error("HAL_ADC_ConfigChannel");
             }
         }
         if(ADCchannelC){
@@ -398,7 +398,7 @@ void cmd_ADC(void){
             {
                 /* Channel Configuration Error */
                 ADCchannelA = ADCchannelB = ADCchannelC = 0;
-                error("HAL_ADC_ConfigChannelC");
+                error("HAL_ADC_ConfigChannel");
             }
         }
         return;
@@ -407,7 +407,7 @@ void cmd_ADC(void){
 	if(tp) {
         getargs(&tp, 17, ",");
         if(!ADCchannelA)error("ADC not open");
-        if(!(argc >= 1))error("Argument count");
+        if(!(argc >= 1))StandardError(2);//error("Argument count");
        // int64_t *a1point;
         //int64_t *)a1point=NULL; a2point=NULL; a3point=NULL;
         //a1float=NULL; a2float=NULL; a3float=NULL;
@@ -499,20 +499,20 @@ void cmd_ADC(void){
         if (HAL_ADC_Start(&hadc1) != HAL_OK)
         {
             /* Start Conversation Error */
-            error("HAL_ADC_StartA");
+            StandardError(27);//HAL_TIM_Base_Start_IT;
         }
         if(ADCchannelB){
             if (HAL_ADC_Start(&hadc3) != HAL_OK)
             {
                 /* Start Conversation Error */
-                error("HAL_ADC_StartB");
+                StandardError(27);//HAL_TIM_Base_Start_IT;
             }
         }
         if(ADCchannelC){
             if (HAL_ADC_Start(&hadc2) != HAL_OK)
             {
                 /* Start Conversation Error */
-                error("HAL_ADC_StartC");
+                StandardError(27);//HAL_TIM_Base_Start_IT;
             }
         }
         MX_TIM7_Init(prescale,period);
@@ -560,7 +560,7 @@ void cmd_ADC(void){
     if(tp) {
         MMFLOAT voltage;
         getargs(&tp, 5, ",");
-        if(argc!=3 && argc!=5)error("Syntax");
+        if(argc!=3 && argc!=5)SyntaxError();
         ADCtriggerchannel=getint(argv[0],1,ADCNumchannels);
         voltage = getnumber(argv[2]);
         if(voltage<=-VCC || voltage >=VCC) error("Invalid Voltage");
@@ -599,7 +599,7 @@ void cmd_ADC(void){
     tp = checkstring(cmdline, "OPEN");
     if(tp) {
         getargs(&tp, 9, ",");
-        if(argc<3)error("Syntax");
+        if(argc<3)SyntaxError();
         if(ADCchannelA)error("ADC already open");
         memset(&sConfigA,0,sizeof(ADC_ChannelConfTypeDef));
         memset(&sConfigB,0,sizeof(ADC_ChannelConfTypeDef));
@@ -695,7 +695,7 @@ void cmd_ADC(void){
         {
             /* Channel Configuration Error */
             ADCchannelA = ADCchannelB = ADCchannelC = 0;
-            error("HAL_ADC_ConfigChannelA");
+            error("HAL_ADC_ConfigChannel");
         }
 
         if(ADCchannelB){
@@ -712,7 +712,7 @@ void cmd_ADC(void){
             {
                 /* Channel Configuration Error */
                 ADCchannelA = ADCchannelB = ADCchannelC = 0;
-                error("HAL_ADC_ConfigChannelB");
+                error("HAL_ADC_ConfigChannel");
             }
         }
         if(ADCchannelC){
@@ -729,7 +729,7 @@ void cmd_ADC(void){
             {
                 /* Channel Configuration Error */
                 ADCchannelA = ADCchannelB = ADCchannelC = 0;
-                error("HAL_ADC_ConfigChannelC");
+                error("HAL_ADC_ConfigChannel");
             }
         }
         return;
@@ -738,7 +738,7 @@ void cmd_ADC(void){
     if(tp) {
         getargs(&tp, 5, ",");
         if(!ADCchannelA)error("ADC not open");
-        if(!(argc >= 1))error("Argument count");
+        if(!(argc >= 1))StandardError(2);//error("Argument count");
         a1point=NULL; a2point=NULL; a3point=NULL;
         ADCmax=0;
         ADCpos=0;
@@ -781,20 +781,20 @@ void cmd_ADC(void){
         if (HAL_ADC_Start(&hadc1) != HAL_OK)
         {
             /* Start Conversation Error */
-            error("HAL_ADC_StartA");
+            StandardError(27);//HAL_TIM_Base_Start_IT;
         }
         if(ADCchannelB){
             if (HAL_ADC_Start(&hadc3) != HAL_OK)
             {
                 /* Start Conversation Error */
-                error("HAL_ADC_StartB");
+                StandardError(27);//HAL_TIM_Base_Start_IT;
             }
         }
         if(ADCchannelC){
             if (HAL_ADC_Start(&hadc2) != HAL_OK)
             {
                 /* Start Conversation Error */
-                error("HAL_ADC_StartC");
+                StandardError(27);//HAL_TIM_Base_Start_IT;
             }
         }
         MX_TIM7_Init(prescale,period);
@@ -832,7 +832,7 @@ void cmd_ADC(void){
     if(tp) {
         MMFLOAT voltage;
         getargs(&tp, 3, ",");
-        if(argc!=3)error("Syntax");
+        if(argc!=3)SyntaxError();
         ADCtriggerchannel=getint(argv[0],1,ADCNumchannels);
         voltage = getnumber(argv[2]);
         if(voltage<=-VCC || voltage >=VCC) error("Invalid Voltage");
@@ -882,7 +882,7 @@ void cmd_DAC(void){
     if(tp){
         getargs(&tp, 5, ",");
         if(CurrentlyPlaying != P_NOTHING) error("DAC in use");
-        if(!(argc == 5 || argc == 3))error("Argument count");
+        if(!(argc == 5 || argc == 3))StandardError(2);//error("Argument count");
         freq=getnumber(argv[0]);
         if(freq>700000) error("Frequency > 700KHz");
         freq*=2;
@@ -904,7 +904,7 @@ void cmd_DAC(void){
         return;
     }
     getargs(&cmdline, 9, ",");
-    if((argc & 0x01) == 0 || argc < 3) error("Invalid syntax");
+    if((argc & 0x01) == 0 || argc < 3) SyntaxError();//error("Invalid syntax");
 
     channel = getint(argv[0], 1, 2);
     voltage = getnumber(argv[2]);
@@ -942,7 +942,7 @@ void cmd_DAC(void){
     if(tp){
         getargs(&tp, 5, ",");
         if(CurrentlyPlaying != P_NOTHING) error("DAC in use");
-        if(!(argc == 5 || argc == 3))error("Argument count");
+        if(!(argc == 5 || argc == 3))StandardError(2);//error("Argument count");
         freq=getnumber(argv[0]);
         if(freq>700000) error("Frequency > 700KHz");
         freq*=2;
@@ -979,7 +979,7 @@ void cmd_DAC(void){
         return;
     }
     getargs(&cmdline, 9, ",");
-    if((argc & 0x01) == 0 || argc < 3) error("Invalid syntax");
+    if((argc & 0x01) == 0 || argc < 3) SyntaxError();//error("Invalid syntax");
 
     channel = getint(argv[0], 1, 2);
     voltage = getnumber(argv[2]);

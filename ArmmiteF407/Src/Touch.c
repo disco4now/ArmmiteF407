@@ -57,7 +57,7 @@ void TDelay(void);
 // these are defined so that the state of the touch PEN IRQ can be determined with the minimum of CPU cycles
 extern SPI_HandleTypeDef GenSPI;
 
-#define TOUCH_SPI_SPEED     3                                  // we run at 200KHz to minimise noise
+//#define TOUCH_SPI_SPEED     3                                  // we run at 200KHz to minimise noise
 int TOUCH_GETIRQTRIS=0;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -67,7 +67,7 @@ void MIPS16 ConfigTouch(char *p) {
 	int p1,p2,p3;
 	char code;
 	getargs(&p, 5, ",");
-    if(!(argc == 3 || argc == 5)) error("Argument count");
+    if(!(argc == 3 || argc == 5)) StandardError(2);//error("Argument count");
 
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	p1 = getinteger(argv[0]);
@@ -116,7 +116,7 @@ void MIPS16 GetCalibration(int x, int y, int *xval, int *yval) {
     int i, j, k;
     #define TCAL_FONT    0x02
 
-	if(HRes == 0) error("Display not configured");
+	if(HRes == 0) StandardError(4);//error("Display not configured");
     ClearScreen(BLACK);
     GUIPrintString(HRes/2, VRes/2 - GetFontHeight(TCAL_FONT)/2, TCAL_FONT, JUSTIFY_CENTER, JUSTIFY_MIDDLE, 0, WHITE, BLACK, "Touch Target");
     GUIPrintString(HRes/2, VRes/2 + GetFontHeight(TCAL_FONT)/2, TCAL_FONT, JUSTIFY_CENTER, JUSTIFY_MIDDLE, 0, WHITE, BLACK, "and Hold");

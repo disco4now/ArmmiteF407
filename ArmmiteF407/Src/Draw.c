@@ -129,7 +129,7 @@ void polygon(char *p, int close);
 void cmd_guiMX170(void) {
     char *p;
 
-	if(Option.DISPLAY_TYPE == 0) error("Display not configured");
+	if(Option.DISPLAY_TYPE == 0) StandardError(4);//error("Display not configured");
 
     // display a bitmap stored in an integer or string
     if((p = checkstring(cmdline, "BITMAP"))) {
@@ -139,7 +139,7 @@ void cmd_guiMX170(void) {
         long long int i64;
 
         getargs(&p, 15, ",");
-        if(!(argc & 1) || argc < 5) error("Argument count");
+        if(!(argc & 1) || argc < 5) StandardError(2);//error("Argument count");
 
         // set the defaults
         h = 8; w = 8; scale = 1; bytes = 8; fc = gui_fcolour; bc = gui_bcolour;
@@ -175,7 +175,7 @@ void cmd_guiMX170(void) {
 
         if(*p && *p != '\'') {                                      // if the calibration is provided on the command line
             getargs(&p, 9, ",");
-            if(argc != 9) error("Argument count");
+            if(argc != 9) StandardError(2);//error("Argument count");
             Option.TOUCH_SWAPXY = getinteger(argv[0]);
             Option.TOUCH_XZERO = getinteger(argv[2]);
             Option.TOUCH_YZERO = getinteger(argv[4]);
@@ -184,7 +184,7 @@ void cmd_guiMX170(void) {
             SaveOptions();
             return;
         } else {
-            if(CurrentLinePtr) error("Invalid in a program");
+            if(CurrentLinePtr) StandardError(23);//Invalid in a program;
         }
 
         GetCalibration(TARGET_OFFSET, TARGET_OFFSET, &tlx, &tly);
@@ -278,7 +278,7 @@ void cmd_guiMX170(void) {
     }
 
 
-    error("Unknown command");
+    StandardError(7);//error("Unknown command");
 }
 /* This used by the BLIT commands. It uses temporary memory*/
 
@@ -389,7 +389,7 @@ void cmd_blit(void){
     if((void *)ReadBuffer == (void *)DisplayNotSet) error("Invalid on this display");
     if((p = checkstring(cmdline, "READ"))) {
         getargs(&p, 9, ",");
-        if(argc !=9) error("Syntax");
+        if(argc !=9) SyntaxError();
         if(*argv[0] == '#') argv[0]++;                              // check if the first arg is prefixed with a #
         bnbr = getint(argv[0], 1, MAXBLITBUF) - 1;                  // get the buffer number
         x1 = getinteger(argv[2]);
@@ -408,7 +408,7 @@ void cmd_blit(void){
         } else error("Buffer in use");
     } else if((p = checkstring(cmdline, "WRITE"))) {
         getargs(&p, 9, ",");
-        if(argc != 9) error("Syntax");
+        if(argc != 9) SyntaxError();
         if(*argv[0] == '#') argv[0]++;                              // check if the first arg is prefixed with a #
         bnbr = getint(argv[0], 1, MAXBLITBUF) - 1;                  // get the buffer number
         x1 = getinteger(argv[2]);
@@ -435,7 +435,7 @@ void cmd_blit(void){
         // get the number
      } else {
     	 getargs(&cmdline, 11,",");
-    	 if(argc !=11) error("Syntax");
+    	 if(argc !=11) SyntaxError();
     	 x1 = getinteger(argv[0]);
     	 y1 = getinteger(argv[2]);
     	 x2 = getinteger(argv[4]);
@@ -493,7 +493,7 @@ void cmd_text(void) {
     int jh = 0, jv = 0, jo = 0;
 
     getargs(&cmdline, 17, ",");                                     // this is a macro and must be the first executable stmt
-    if(!(argc & 1) || argc < 5) error("Argument count");
+    if(!(argc & 1) || argc < 5) StandardError(2);//error("Argument count");
     x = getinteger(argv[0]);
     y = getinteger(argv[2]);
     s = getCstring(argv[4]);
@@ -548,7 +548,7 @@ void  getargaddress (char *p, long long int **ip, MMFLOAT **fp, int *n){
                 }
             }
         }
-        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
         *fp = (MMFLOAT*)ptr;
     } else if(ptr && vartbl[VarIndex].type & T_INT) {
         if(vartbl[VarIndex].dims[0] <= 0){
@@ -571,7 +571,7 @@ void  getargaddress (char *p, long long int **ip, MMFLOAT **fp, int *n){
                 }
             }
         }
-        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[1] != 0) e StandardError(3);//error("Invalid variable");
         *ip = (long long int *)ptr;
     } else {
     	*n=1; //may be a function call
@@ -612,7 +612,7 @@ void  getargaddress (char *p, long long int **ip, MMFLOAT **fp, int *n){
                 }
             }
         }
-        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
         if(vartbl[VarIndex].type & T_NBR)*fp = (MMFLOAT*)ptr;
         else *ip = (long long int *)ptr;
     } else {
@@ -627,7 +627,7 @@ void cmd_pixel(void) {
     long long int *x1ptr, *y1ptr, *cptr;
     MMFLOAT *x1fptr, *y1fptr, *cfptr;
     getargs(&cmdline, 5,",");
-    if(!(argc == 3 || argc == 5)) error("Argument count");
+    if(!(argc == 3 || argc == 5)) StandardError(2);//error("Argument count");
     getargaddress(argv[0], &x1ptr, &x1fptr, &n);
     if(n != 1) getargaddress(argv[2], &y1ptr, &y1fptr, &n);
     if(n==1){ //just a single point
@@ -648,7 +648,7 @@ void cmd_pixel(void) {
                 if(nc < n) n=nc; //adjust the dimensionality
                 for(i=0;i<nc;i++){
                     c = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-                    if(c < 0 || c > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                    if(c < 0 || c > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                 }
             }
         }
@@ -661,6 +661,7 @@ void cmd_pixel(void) {
     }
     if(Option.Refresh)Display_Refresh();
 }
+
 void DrawBuffered(int xti, int yti, int c, int complete){
 	static unsigned char pos=0;
 	static unsigned char movex, movey, movec;
@@ -701,7 +702,7 @@ void DrawBuffered(int xti, int yti, int c, int complete){
 		}
 	}
 }
-
+#ifdef VGT
 void bezier(float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, int c){
     float tmp,tmp1,tmp2,tmp3,tmp4,tmp5,tmp6,tmp7,tmp8,t=0.0,xt=x0,yt=y0;
     int i, xti,yti,xtlast=-1, ytlast=-1;
@@ -729,7 +730,7 @@ void bezier(float x0, float y0, float x1, float y1, float x2, float y2, float x3
     }
 	DrawBuffered(0, 0, 0, 1);
 }
-
+#endif
 
 void pointcalc(int angle, int x, int y, int r2, int *x0, int * y0){
 	float c1,s1;
@@ -821,8 +822,8 @@ void cmd_arc(void){
 	int rad1, rad2, rad3, rstart, quadr;
 	int x0, y0, x1, y1, x2, y2, xr, yr;
 	getargs(&cmdline, 13,",");
-    if(!(argc == 11 || argc == 13)) error("Argument count");
-    if(Option.DISPLAY_TYPE == 0) error("Display not configured");
+    if(!(argc == 11 || argc == 13)) StandardError(2);//error("Argument count");
+    if(Option.DISPLAY_TYPE == 0) StandardError(4);//error("Display not configured");
     x = getinteger(argv[0]);
     y = getinteger(argv[2]);
     r1 = getinteger(argv[4]);
@@ -889,6 +890,7 @@ void cmd_arc(void){
 	Option.Refresh=save_refresh;
     if(Option.Refresh)Display_Refresh();
 }
+#ifdef VGT
 void cmd_bezier(void) {
 	// X coordinate of start point
 	// Y coordinate of start point
@@ -901,8 +903,8 @@ void cmd_bezier(void) {
 	// Colour of curve
 	int xx0, yy0, xx1, yy1, xx2, yy2, xx3, yy3, c;
     getargs(&cmdline, 17,",");
-    if(!(argc==15 || argc==17))error("Argument count");
-    if(Option.DISPLAY_TYPE == 0) error("Display not configured");
+    if(!(argc==15 || argc==17))StandardError(2);//error("Argument count");
+    if(Option.DISPLAY_TYPE == 0) StandardError(4);//error("Display not configured");
     xx0 = getint(argv[0],0,HRes-1);
     yy0 = getint(argv[2],0,VRes-1);
     xx1 = getinteger(argv[4]);
@@ -919,6 +921,7 @@ void cmd_bezier(void) {
 	Option.Refresh=save_refresh;
     if(Option.Refresh)Display_Refresh();
 }
+#endif
 typedef struct {
     unsigned char red;
     unsigned char green;
@@ -1033,7 +1036,7 @@ void polygon(char *p, int close){
 	int i, f=0, c, xtot=0, ymax=0, ymin=1000000;
     int n=0, nx=0, ny=0, nc=0, nf=0;
     getargs(&p, 9,",");
-    if(Option.DISPLAY_TYPE == 0) error("Display not configured");
+    if(Option.DISPLAY_TYPE == 0) StandardError(4);//error("Display not configured");
     getargaddress(argv[0], &polycount, &polycountf, &n);
     if(n==1){
     	xcount = xtot = getinteger(argv[0]);
@@ -1130,7 +1133,7 @@ void polygon(char *p, int close){
 				if(nc < n) error("Foreground colour Dimensions");
 				for(i=0;i<n;i++){
 					cc[i] = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-					if(cc[i] < 0 || cc[i] > 0xFFFFFF) error("% is invalid (valid is % to %)", (int)cc[i], 0, 0xFFFFFF);
+					if(cc[i] < 0 || cc[i] > 0xFFFFFF) StandardErrorParam3(19, (int)cc[i], 0, 0xFFFFFF);
 				}
 			}
 		} else for(i=0;i<n;i++)cc[i] = gui_fcolour;
@@ -1141,7 +1144,7 @@ void polygon(char *p, int close){
 				if(nf < n) error("Background colour Dimensions");
 				for(i=0;i<n;i++){
 					ff[i] = (ffptr == NULL ? fptr[i] : (int)ffptr[i]);
-					if(ff[i] < 0 || ff[i] > 0xFFFFFF) error("% is invalid (valid is % to %)", (int)ff[i], 0, 0xFFFFFF);
+					if(ff[i] < 0 || ff[i] > 0xFFFFFF) StandardErrorParam3(19, (int)ff[i], 0, 0xFFFFFF);
 				}
 			}
 		}
@@ -1325,7 +1328,7 @@ void cmd_polygon(void){
 				if(nc < n) error("Foreground colour Dimensions");
 				for(i=0;i<n;i++){
 					cc[i] = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-					if(cc[i] < 0 || cc[i] > 0xFFFFFF) error("% is invalid (valid is % to %)", (int)cc[i], 0, 0xFFFFFF);
+					if(cc[i] < 0 || cc[i] > 0xFFFFFF) StandardErrorParam3(19, (int)cc[i], 0, 0xFFFFFF);
 				}
 			}
 		} else for(i=0;i<n;i++)cc[i] = gui_fcolour;
@@ -1336,7 +1339,7 @@ void cmd_polygon(void){
 				if(nf < n) error("Background colour Dimensions");
 				for(i=0;i<n;i++){
 					ff[i] = (ffptr == NULL ? fptr[i] : (int)ffptr[i]);
-					if(ff[i] < 0 || ff[i] > 0xFFFFFF) error("% is invalid (valid is % to %)", (int)ff[i], 0, 0xFFFFFF);
+					if(ff[i] < 0 || ff[i] > 0xFFFFFF) StandardErrorParam3(19, (int)ff[i], 0, 0xFFFFFF);
 				}
 			}
 		}
@@ -1419,7 +1422,7 @@ void cmd_circle(void) {
     long long int *xptr, *yptr, *rptr, *fptr, *wptr, *cptr, *aptr;
     MMFLOAT *xfptr, *yfptr, *rfptr, *ffptr, *wfptr, *cfptr, *afptr;
     getargs(&cmdline, 13,",");
-    if(!(argc & 1) || argc < 5) error("Argument count");
+    if(!(argc & 1) || argc < 5) StandardError(2);//error("Argument count");
     getargaddress(argv[0], &xptr, &xfptr, &n);
     if(n != 1) {
         getargaddress(argv[2], &yptr, &yfptr, &n);
@@ -1447,7 +1450,7 @@ void cmd_circle(void) {
                 if(nw > 1 && nw < n) n=nw; //adjust the dimensionality
                 for(i=0;i<nw;i++){
                     w = (wfptr == NULL ? wptr[i] : (int)wfptr[i]);
-                    if(w < 0 || w > 100) error("% is invalid (valid is % to %)", (int)w, 0, 100);
+                    if(w < 0 || w > 100) StandardErrorParam3(19, (int)w, 0, 100);
                 }
             }
         }
@@ -1463,7 +1466,7 @@ void cmd_circle(void) {
                 if(nc > 1 && nc < n) n=nc; //adjust the dimensionality
                 for(i=0;i<nc;i++){
                     c = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-                    if(c < 0 || c > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                    if(c < 0 || c > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                 }
             }
         }
@@ -1474,7 +1477,7 @@ void cmd_circle(void) {
                 if(nf > 1 && nf < n) n=nf; //adjust the dimensionality
                 for(i=0;i<nf;i++){
                     f = (ffptr == NULL ? fptr[i] : (int)ffptr[i]);
-                    if(f < 0 || f > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                    if(f < 0 || f > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                 }
             }
         }
@@ -1612,45 +1615,45 @@ void drawAALine(MMFLOAT x0 , MMFLOAT y0 , MMFLOAT x1 , MMFLOAT y1, uint32_t c, i
 	}
 }
 */
+//Upated for -ve w
 void cmd_line(void) {
-    if(Option.DISPLAY_TYPE == 0) error("Display not configured");
+    if(Option.DISPLAY_TYPE == 0) StandardError(4);//error("Display not configured");
     char *p;
     int x1, y1, x2, y2, w=0, c=0, n=0 ,i, nc=0, nw=0;
-
-         if((p=checkstring(cmdline,"PLOT"))){
-           long long int *y1ptr;
-           MMFLOAT *y1fptr;
-           int xs=0,xinc=1;
-           int ys=0,yinc=1;
-           getargs(&p, 13,",");
-           getargaddress(argv[0], &y1ptr, &y1fptr, &n);
-           if(n==1)error("Argument 1 is not an array");
-           nc=n;
-           if(argc>=3 && *argv[2])nc=getint(argv[2],1,HRes-1);
-           if(nc>n)nc=n;
-           if(argc>=5 && *argv[4])xs=getint(argv[4],0,HRes-1);
-           if(argc>=7 && *argv[6])xinc=getint(argv[6],1,HRes-1);
-           if(argc>=9 && *argv[8])ys=getint(argv[8],OptionBase,n-2+OptionBase);
-           if(argc>=11 && *argv[10])yinc=getint(argv[10],1,n-1);
-           c = gui_fcolour;  w = 1;                                        // setup the defaults
-           if(argc == 13) c = getint(argv[12], 0, WHITE);
-           int y=ys-OptionBase;
-           for(i=0;i<(nc-1);i++){
-              if(y>=nc)break;
-              if(y+yinc>=nc)break;
-              x1 = xs+i*xinc;
-              y1 = (y1fptr==NULL ? y1ptr[y] : (int)y1fptr[y]);
-              if(y1<0)y1=0;
-              if(y1>=VRes)y1=VRes-1;
-              x2 = xs+(i+1)*xinc;
-              y2 = (y1fptr==NULL ? y1ptr[y+yinc] : (int)y1fptr[y+yinc]);
-              if(x1>=HRes)break; //can only get worse so stop now
-              if(x2>=HRes)x2=HRes-1;
-              if(y2<0)y2=0;
-              if(y2>=VRes)y2=VRes-1;
-              DrawLine(x1, y1, x2, y2, w, c);
-              y+=yinc;
-           }
+      if((p=checkstring(cmdline,"PLOT"))){
+         long long int *y1ptr;
+         MMFLOAT *y1fptr;
+         int xs=0,xinc=1;
+         int ys=0,yinc=1;
+         getargs(&p, 13,",");
+         getargaddress(argv[0], &y1ptr, &y1fptr, &n);
+         if(n==1)error("Argument 1 is not an array");
+         nc=n;
+         if(argc>=3 && *argv[2])nc=getint(argv[2],1,HRes-1);
+         if(nc>n)nc=n;
+         if(argc>=5 && *argv[4])xs=getint(argv[4],0,HRes-1);
+         if(argc>=7 && *argv[6])xinc=getint(argv[6],1,HRes-1);
+         if(argc>=9 && *argv[8])ys=getint(argv[8],OptionBase,n-2+OptionBase);
+         if(argc>=11 && *argv[10])yinc=getint(argv[10],1,n-1);
+         c = gui_fcolour;  w = 1;                                        // setup the defaults
+         if(argc == 13) c = getint(argv[12], 0, WHITE);
+         int y=ys-OptionBase;
+         for(i=0;i<(nc-1);i++){
+           if(y>=nc)break;
+           if(y+yinc>=nc)break;
+           x1 = xs+i*xinc;
+           y1 = (y1fptr==NULL ? y1ptr[y] : (int)y1fptr[y]);
+           if(y1<0)y1=0;
+           if(y1>=VRes)y1=VRes-1;
+           x2 = xs+(i+1)*xinc;
+           y2 = (y1fptr==NULL ? y1ptr[y+yinc] : (int)y1fptr[y+yinc]);
+           if(x1>=HRes)break; //can only get worse so stop now
+           if(x2>=HRes)x2=HRes-1;
+           if(y2<0)y2=0;
+           if(y2>=VRes)y2=VRes-1;
+           DrawLine(x1, y1, x2, y2, w, c);
+           y+=yinc;
+         }
 		} else if((p=checkstring(cmdline,"GRAPH"))){
             char *pp=GetTempMemory(STRINGSIZE);
             strcpy((char *)pp,(char *)p);
@@ -1659,7 +1662,8 @@ void cmd_line(void) {
             pp[1]=',';
             polygon(pp,0);
             return;
-/*		} else if((p=checkstring(cmdline,"AA"))){
+#ifdef VGT
+		} else if((p=checkstring(cmdline,"AA"))){
 			MMFLOAT x1, y1, x2, y2;
 			getargs(&p, 11,",");
 			c = gui_fcolour;  ;  w = 1;                                         // setup the defaults
@@ -1673,15 +1677,15 @@ void cmd_line(void) {
             if(argc == 11) c = getint(argv[10], 0, WHITE);
 			drawAALine(x1, y1, x2, y2, c, w);
 			return;
-*/
+#endif
 		} else {
             long long int *x1ptr, *y1ptr, *x2ptr, *y2ptr, *wptr, *cptr;
             MMFLOAT *x1fptr, *y1fptr, *x2fptr, *y2fptr, *wfptr, *cfptr;
             getargs(&cmdline, 11,",");
-            if(!(argc & 1) || argc < 3) error("Argument count");
+            if(!(argc & 1) || argc < 3) StandardError(2);//error("Argument count");
             getargaddress(argv[0], &x1ptr, &x1fptr, &n);
             if(n != 1) {
-                if(argc<7)error("Argument count");
+                if(argc<7)StandardError(2);//error("Argument count");
                 getargaddress(argv[2], &y1ptr, &y1fptr, &n);
                 getargaddress(argv[4], &x2ptr, &x2fptr, &n);
                 getargaddress(argv[6], &y2ptr, &y2fptr, &n);
@@ -1698,14 +1702,14 @@ void cmd_line(void) {
                 else {
                     y2=CurrentY;CurrentY=y1;
                 }
-                /* start of fix from Picomite RC9 */
+                // start of fix from Picomite RC9
                 if(x1==CurrentX && y1==CurrentY){
                     CurrentX=x2;
                     CurrentY=y2;
                 }
-                /***** End of fix ****************/
+                //***** End of fix ***************
                 if(argc > 7 && *argv[8]){
-                    w = getint(argv[8], 1, 100);
+                    w = getint(argv[8], -100, 100);
                 }
                 if(argc == 11) c = getint(argv[10], 0, WHITE);
                 DrawLine(x1, y1, x2, y2, w, c);
@@ -1713,12 +1717,12 @@ void cmd_line(void) {
                 c = gui_fcolour;  w = 1;                                        // setup the defaults
                 if(argc > 7 && *argv[8]){
                     getargaddress(argv[8], &wptr, &wfptr, &nw);
-                    if(nw == 1) w = getint(argv[8], 0, 100);
+                    if(nw == 1) w = getint(argv[8], -100, 100);
                     else if(nw>1) {
                         if(nw > 1 && nw < n) n=nw; //adjust the dimensionality
                         for(i=0;i<nw;i++){
                             w = (wfptr == NULL ? wptr[i] : (int)wfptr[i]);
-                            if(w < 0 || w > 100) error("% is invalid (valid is % to %)", (int)w, 0, 100);
+                            if(w < -100 || w > 100) StandardErrorParam3(19, (int)w, -100, 100);
                         }
                     }
                 }
@@ -1730,7 +1734,7 @@ void cmd_line(void) {
                         if(nc > 1 && nc < n) n=nc; //adjust the dimensionality
                         for(i=0;i<nc;i++){
                             c = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-                            if(c < 0 || c > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                            if(c < 0 || c > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                         }
                     }
                 }
@@ -1741,12 +1745,11 @@ void cmd_line(void) {
                     y2 = (y2fptr==NULL ? y2ptr[i] : (int)y2fptr[i]);
                     if(nw > 1) w = (wfptr==NULL ? wptr[i] : (int)wfptr[i]);
                     if(nc > 1) c = (cfptr==NULL ? cptr[i] : (int)cfptr[i]);
-                    DrawLine(x1, y1, x2, y2, w, c);
+                    if(w)DrawLine(x1, y1, x2, y2, w, c);
                 }
             }
         }
 }
-
 
 /*
 void cmd_line(void) {
@@ -1754,7 +1757,7 @@ void cmd_line(void) {
     long long int *x1ptr, *y1ptr, *x2ptr, *y2ptr, *wptr, *cptr;
     MMFLOAT *x1fptr, *y1fptr, *x2fptr, *y2fptr, *wfptr, *cfptr;
     getargs(&cmdline, 11,",");
-    if(!(argc & 1) || argc < 7) error("Argument count");
+    if(!(argc & 1) || argc < 7) StandardError(2);//error("Argument count");
     getargaddress(argv[0], &x1ptr, &x1fptr, &n);
     if(n != 1) {
         getargaddress(argv[2], &y1ptr, &y1fptr, &n);
@@ -1781,7 +1784,7 @@ void cmd_line(void) {
                 if(nw > 1 && nw < n) n=nw; //adjust the dimensionality
                 for(i=0;i<nw;i++){
                     w = (wfptr == NULL ? wptr[i] : (int)wfptr[i]);
-                    if(w < 0 || w > 100) error("% is invalid (valid is % to %)", (int)w, 0, 100);
+                    if(w < 0 || w > 100) StandardErrorParam3(19, (int)w, 0, 100);
                 }
             }
         }
@@ -1792,7 +1795,7 @@ void cmd_line(void) {
                 if(nc > 1 && nc < n) n=nc; //adjust the dimensionality
                 for(i=0;i<nc;i++){
                     c = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-                    if(c < 0 || c > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                    if(c < 0 || c > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                 }
             }
         }
@@ -1814,7 +1817,7 @@ void cmd_box(void) {
     long long int *x1ptr, *y1ptr, *wiptr, *hptr, *wptr, *cptr, *fptr;
     MMFLOAT *x1fptr, *y1fptr, *wifptr, *hfptr, *wfptr, *cfptr, *ffptr;
     getargs(&cmdline, 13,",");
-    if(!(argc & 1) || argc < 7) error("Argument count");
+    if(!(argc & 1) || argc < 7) StandardError(2);//error("Argument count");
     getargaddress(argv[0], &x1ptr, &x1fptr, &n);
     if(n != 1) {
         getargaddress(argv[2], &y1ptr, &y1fptr, &n);
@@ -1842,7 +1845,7 @@ void cmd_box(void) {
                 if(nw > 1 && nw < n) n=nw; //adjust the dimensionality
                 for(i=0;i<nw;i++){
                     w = (wfptr == NULL ? wptr[i] : (int)wfptr[i]);
-                    if(w < 0 || w > 100) error("% is invalid (valid is % to %)", (int)w, 0, 100);
+                    if(w < 0 || w > 100) StandardErrorParam3(19, (int)w, 0, 100);
                 }
             }
         }
@@ -1853,7 +1856,7 @@ void cmd_box(void) {
                 if(nc > 1 && nc < n) n=nc; //adjust the dimensionality
                 for(i=0;i<nc;i++){
                     c = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-                    if(c < 0 || c > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                    if(c < 0 || c > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                 }
             }
         }
@@ -1864,7 +1867,7 @@ void cmd_box(void) {
                 if(nf > 1 && nf < n) n=nf; //adjust the dimensionality
                 for(i=0;i<nf;i++){
                     f = (ffptr == NULL ? fptr[i] : (int)ffptr[i]);
-                    if(f < -1 || f > WHITE) error("% is invalid (valid is % to %)", (int)c, -1, WHITE);
+                    if(f < -1 || f > WHITE) StandardErrorParam3(19, (int)c, -1, WHITE);
                 }
             }
         }
@@ -1891,7 +1894,7 @@ void cmd_rbox(void) {
     long long int *x1ptr, *y1ptr, *wiptr, *hptr, *wptr, *cptr, *fptr;
     MMFLOAT *x1fptr, *y1fptr, *wifptr, *hfptr, *wfptr, *cfptr, *ffptr;
     getargs(&cmdline, 13,",");
-    if(!(argc & 1) || argc < 7) error("Argument count");
+    if(!(argc & 1) || argc < 7) StandardError(2);//error("Argument count");
     getargaddress(argv[0], &x1ptr, &x1fptr, &n);
     if(n != 1) {
         getargaddress(argv[2], &y1ptr, &y1fptr, &n);
@@ -1919,7 +1922,7 @@ void cmd_rbox(void) {
                 if(nw > 1 && nw < n) n=nw; //adjust the dimensionality
                 for(i=0;i<nw;i++){
                     w = (wfptr == NULL ? wptr[i] : (int)wfptr[i]);
-                    if(w < 0 || w > 100) error("% is invalid (valid is % to %)", (int)w, 0, 100);
+                    if(w < 0 || w > 100) StandardErrorParam3(19, (int)w, 0, 100);
                 }
             }
         }
@@ -1930,7 +1933,7 @@ void cmd_rbox(void) {
                 if(nc > 1 && nc < n) n=nc; //adjust the dimensionality
                 for(i=0;i<nc;i++){
                     c = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-                    if(c < 0 || c > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                    if(c < 0 || c > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                 }
             }
         }
@@ -1941,7 +1944,7 @@ void cmd_rbox(void) {
                 if(nf > 1 && nf < n) n=nf; //adjust the dimensionality
                 for(i=0;i<nf;i++){
                     f = (ffptr == NULL ? fptr[i] : (int)ffptr[i]);
-                    if(f < -1 || f > WHITE) error("% is invalid (valid is % to %)", (int)c, -1, WHITE);
+                    if(f < -1 || f > WHITE) StandardErrorParam3(19, (int)c, -1, WHITE);
                 }
             }
         }
@@ -1973,7 +1976,7 @@ void fun_pixel(void) {
     } c;
     int x,y;
 	getargs(&ep, 3,",");
-	if(argc != 3) error("Argument count");
+	if(argc != 3) StandardError(2);//error("Argument count");
     x = getinteger(argv[0]);
     y = getinteger(argv[2]);
     ReadBuffer(x,y,x,y,(char *)&c.rgb);
@@ -1986,7 +1989,7 @@ void cmd_triangle(void) {                                           // thanks to
     long long int *x3ptr, *y3ptr, *x1ptr, *y1ptr, *x2ptr, *y2ptr, *fptr, *cptr;
     MMFLOAT *x3fptr, *y3fptr, *x1fptr, *y1fptr, *x2fptr, *y2fptr, *ffptr, *cfptr;
     getargs(&cmdline, 15,",");
-    if(!(argc & 1) || argc < 11) error("Argument count");
+    if(!(argc & 1) || argc < 11) StandardError(2);//error("Argument count");
     getargaddress(argv[0], &x1ptr, &x1fptr, &n);
     if(n != 1) {
     	int cn=n;
@@ -2022,7 +2025,7 @@ void cmd_triangle(void) {                                           // thanks to
                 if(nc > 1 && nc < n) n=nc; //adjust the dimensionality
                 for(i=0;i<nc;i++){
                     c = (cfptr == NULL ? cptr[i] : (int)cfptr[i]);
-                    if(c < 0 || c > WHITE) error("% is invalid (valid is % to %)", (int)c, 0, WHITE);
+                    if(c < 0 || c > WHITE) StandardErrorParam3(19, (int)c, 0, WHITE);
                 }
             }
         }
@@ -2033,7 +2036,7 @@ void cmd_triangle(void) {                                           // thanks to
                 if(nf > 1 && nf < n) n=nf; //adjust the dimensionality
                 for(i=0;i<nf;i++){
                     f = (ffptr == NULL ? fptr[i] : (int)ffptr[i]);
-                    if(f < -1 || f > WHITE) error("% is invalid (valid is % to %)", (int)c, -1, WHITE);
+                    if(f < -1 || f > WHITE) StandardErrorParam3(19, (int)c, -1, WHITE);
                 }
             }
         }
@@ -2082,7 +2085,7 @@ void fun_rgb(void) {
             else if(checkstring(argv[0], "GREY"))    iret = GRAY;
             else error("Invalid colour: $", argv[0]);
     } else
-        error("Syntax");
+        SyntaxError();
     targ = T_INT;
 }
 
@@ -2108,7 +2111,7 @@ void fun_mmvres(void) {
 
 void cmd_font(void) {
     getargs(&cmdline, 3, ",");
-    if(argc < 1) error("Argument count");
+    if(argc < 1) StandardError(2);//error("Argument count");
     if(*argv[0] == '#') ++argv[0];
     if(argc == 3)
         SetFont(((getint(argv[0], 1, FONT_TABLE_SIZE) - 1) << 4) | getint(argv[2], 1, 15));
@@ -2128,7 +2131,7 @@ void cmd_font(void) {
 
 void cmd_colour(void) {
     getargs(&cmdline, 3, ",");
-    if(argc < 1) error("Argument count");
+    if(argc < 1) StandardError(2);//error("Argument count");
     gui_fcolour = getint(argv[0], 0, WHITE);
     if(argc == 3)
         gui_bcolour = getint(argv[2], -1, WHITE);
@@ -2142,14 +2145,14 @@ void cmd_colour(void) {
 
 
 void fun_mmcharwidth(void) {
-    if(Option.DISPLAY_TYPE == 0) error("Display not configured");
+    if(Option.DISPLAY_TYPE == 0) StandardError(4);//error("Display not configured");
     iret = FontTable[gui_font >> 4][0] * (gui_font & 0b1111);
     targ = T_INT;
 }
 
 
 void fun_mmcharheight(void) {
-    if(Option.DISPLAY_TYPE == 0) error("Display not configured");
+    if(Option.DISPLAY_TYPE == 0) StandardError(4);//error("Display not configured");
     iret = FontTable[gui_font >> 4][1] * (gui_font & 0b1111);
     targ = T_INT;
 }
@@ -2188,6 +2191,77 @@ Draw a line on a the video output
 
 void DrawLine(int x1, int y1, int x2, int y2, int w, int c) {
 
+    if(y1 == y2  && w>0) {
+        DrawRectangle(x1, y1, x2, y2 + w - 1, c);                   // horiz line
+    if(Option.Refresh)Display_Refresh();
+        return;
+    }
+    if(x1 == x2 && w>0) {
+        DrawRectangle(x1, y1, x2 + w - 1, y2, c);                   // vert line
+    if(Option.Refresh)Display_Refresh();
+        return;
+    }
+    if(w==1 || w==-1){
+        int  dx, dy, sx, sy, err, e2;
+        dx = abs(x2 - x1); sx = x1 < x2 ? 1 : -1;
+        dy = -abs(y2 - y1); sy = y1 < y2 ? 1 : -1;
+        err = dx + dy;
+        while(1) {
+            DrawBuffered(x1, y1, c,0);
+            e2 = 2 * err;
+            if (e2 >= dy) {
+                if (x1 == x2) break;
+                err += dy; x1 += sx;
+            }
+            if (e2 <= dx) {
+                if (y1 == y2) break;
+                err += dx; y1 += sy;
+            }
+        }
+        DrawBuffered(0, 0, 0, 1);
+    } else {
+    float start,end;
+    if(w<0){
+        w=abs(w);
+        start=-(w / 2.0f);
+        end=w / 2.0f;
+    } else {
+        start=0.0f;
+        end=w;
+    }
+    // Calculate the line direction and length
+    float dx = x2 - x1;
+    float dy = y2 - y1;
+    float length = sqrtf(dx * dx + dy * dy);
+
+    // Normalize direction vector
+    float nx = dx / length;
+    float ny = dy / length;
+
+    // Calculate the perpendicular vector for width
+    float px = -ny;
+    float py = nx;
+
+    // Half-width adjustment
+
+    // Loop through every pixel inside the bounding rectangle of the line
+    for (int i = 0; i <= length; i++) {
+        float lineX = x1 + i * nx;
+        float lineY = y1 + i * ny;
+
+        for (float j = start; j <= end; j += 0.25f) { // Finer granularity
+            float pixelX = lineX + j * px;
+            float pixelY = lineY + j * py;
+
+            DrawPixel(roundf(pixelX), roundf(pixelY), c);
+        }
+    }
+    }
+    if(Option.Refresh)Display_Refresh();
+}
+/*
+void DrawLine(int x1, int y1, int x2, int y2, int w, int c) {
+
 
     if(y1 == y2) {
         DrawRectangle(x1, y1, x2, y2 + w - 1, c);                   // horiz line
@@ -2219,7 +2293,7 @@ void DrawLine(int x1, int y1, int x2, int y2, int w, int c) {
     if(Option.Refresh)Display_Refresh();
 }
 
-
+*/
 
 /**********************************************************************************************
 Draw a box

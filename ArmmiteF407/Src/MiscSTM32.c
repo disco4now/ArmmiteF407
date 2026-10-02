@@ -73,7 +73,7 @@ extern SRAM_HandleTypeDef hsram1;
 char *LCDList[] = {"","VGA","SSD1963_5ER_16", "SSD1963_7ER_16",  //0-3
 		"SSD1963_4_16", "SSD1963_5_16", "SSD1963_5A_16", "SSD1963_7_16", "SSD1963_7A_16", "SSD1963_8_16",  //4-9 SSD P16 displays
 		"USER",//10
-		"ST7735","","ST7735S","","ILI9481IPS","ILI9163", "GC9A01", "ST7789","ILI9488", "ILI9481", "ILI9341", "",      //11-22 SPI
+		"ST7735","","ST7735S","","ILI9481IPS","ILI9163", "GC9A01", "ST7789","ILI9488", "ILI9481", "ILI9341", "ST7796S",      //11-22 SPI
 		  "ILI9341_16", "ILI9486_16", "", "IPS_4_16", ""    //23-27 P16 displays
 		 };
 const char *OrientList[] = {"", "LANDSCAPE", "PORTRAIT", "RLANDSCAPE", "RPORTRAIT"};
@@ -152,8 +152,14 @@ void printoptions(void){
 //	LoadOptions();
 
     MMPrintString("\rARMmite F407 MMBasic Version " VERSION "\r\n");
-
-    if(Option.Autorun == true) PO2Str("AUTORUN", "ON");
+    if(Option.Autorun == true){
+    	MMPrintString("OPTION AUTORUN ON");// PO2Str("AUTORUN", "ON");
+        if (Option.NoReset){
+        	MMPrintString(",NORESET");PRet();
+        }else{
+           PRet();
+        }
+    }
     if(Option.Baudrate != CONSOLE_BAUDRATE) PO2Int("BAUDRATE", Option.Baudrate);
     if(Option.Restart > 0) PO2Int("RESTART", Option.Restart);
    // if(Option.Invert == 2) PO2Str("CONSOLE", "AUTO");
@@ -164,12 +170,10 @@ void printoptions(void){
 
     if(Option.DISPLAY_TYPE >= SPI_PANEL_START && Option.DISPLAY_TYPE <=  SPI_PANEL_END){
    	    PO("LCDPANEL"); MMPrintString((char *)LCDList[(int)Option.DISPLAY_TYPE]); MMPrintString(", "); MMPrintString((char *)OrientList[(int)Option.DISPLAY_ORIENTATION]);
-        PPinNameComma(Option.LCD_CD); PPinNameComma(Option.LCD_Reset); PPinNameComma(Option.LCD_CS); PRet();
+        PPinNameComma(Option.LCD_CD); PPinNameComma(Option.LCD_Reset); PPinNameComma(Option.LCD_CS);
+        if(Option.BGR){MMputchar(',');MMPrintString((char *)"INVERT");}
+        PRet();
     }
-    //if(Option.DISPLAY_TYPE >= SSD_PANEL_START && Option.DISPLAY_TYPE <= SSD_PANEL_END) {
-   //     PO("LCDPANEL"); MMPrintString(LCDList[(int)Option.DISPLAY_TYPE]); MMPrintString(", "); MMPrintString((char *)OrientList[(int)Option.DISPLAY_ORIENTATION]);
-   //     PRet();
-   // }
     if((Option.DISPLAY_TYPE >= SSD_PANEL_START && Option.DISPLAY_TYPE <= SSD_PANEL_END) || (Option.DISPLAY_TYPE>= P16_PANEL_START && Option.DISPLAY_TYPE <= P16_PANEL_END)){
         PO("LCDPANEL"); MMPrintString(LCDList[(int)Option.DISPLAY_TYPE]); MMPrintString(", "); MMPrintString((char *)OrientList[(int)Option.DISPLAY_ORIENTATION]);
         PRet();
@@ -263,7 +267,7 @@ void MIPS16 OtherOptions(void) {
 
     tp = checkstring(cmdline, "KEYBOARD");
 	if(tp) {
-    	//if(CurrentLinePtr) error("Invalid in a program");
+    	//if(CurrentLinePtr) StandardError(23);//Invalid in a program;
 		if(checkstring(tp, "DISABLE")){
 			Option.KeyboardConfig = NO_KEYBOARD;
 			HAL_NVIC_DisableIRQ(EXTI15_10_IRQn);
@@ -329,7 +333,7 @@ void MIPS16 OtherOptions(void) {
 
     tp = checkstring(cmdline, "LCDPANEL");
     if(tp) {
-       //if(CurrentLinePtr) error("Invalid in a program");      G.A.
+       //if(CurrentLinePtr) StandardError(23);//Invalid in a program;      G.A.
     	int i;
         if((ttp = checkstring(tp, "CONSOLE"))) {
             if(HRes == 0) error("LCD Panel not configured");
@@ -438,7 +442,7 @@ void MIPS16 OtherOptions(void) {
                 Option.Width = SCREENWIDTH;
                 setterminal(Option.Height,Option.Width);
             }
-            Option.DISPLAY_CONSOLE = Option.DISPLAY_TYPE = Option.DISPLAY_ORIENTATION = Option.SSDspeed = LCDAttrib = HRes = 0;
+            Option.DISPLAY_CONSOLE = Option.DISPLAY_TYPE = Option.DISPLAY_ORIENTATION = Option.SSDspeed = LCDAttrib = Option.BGR = HRes = 0;
             Option.DefaultFC = WHITE; Option.DefaultBC = BLACK; Option.DefaultFont = 0x01;// Option.DefaultBrightness = 100;
             DrawRectangle = (void (*)(int , int , int , int , int )) DisplayNotSet;
             DrawBitmap =  (void (*)(int , int , int , int , int , int , int , unsigned char *)) DisplayNotSet;
@@ -447,7 +451,7 @@ void MIPS16 OtherOptions(void) {
             ReadBuffer = (void (*)(int , int , int , int , char * )) DisplayNotSet;
         }
         else {
-            if(Option.DISPLAY_TYPE) error("Display already configured");
+            if(Option.DISPLAY_TYPE) StandardError(5);//error("Display already configured");
             if(!Option.DISPLAY_TYPE)ConfigDisplaySSD(tp);
             if(!Option.DISPLAY_TYPE) ConfigDisplaySPI(tp);          // if it is not an SSD1963 then try for a SPI type
         }
@@ -456,7 +460,7 @@ void MIPS16 OtherOptions(void) {
     }
     tp = checkstring(cmdline, "TOUCH");
     if(tp) {
-    	//if(CurrentLinePtr) error("Invalid in a program");        //G.A.
+    	//if(CurrentLinePtr) StandardError(23);//Invalid in a program;        //G.A.
 		if(checkstring(tp, "DISABLE")) {
 			touchdisable();
 		} else {

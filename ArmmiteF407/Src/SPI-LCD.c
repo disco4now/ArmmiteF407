@@ -56,7 +56,7 @@ void DefineRegionSPI(int xstart, int ystart, int xend, int yend, int rw);
 void DrawBitmapSPI(int x1, int y1, int width, int height, int scale, int fc, int bc, unsigned char *bitmap);
 int CurrentSPISpeed=NONE_SPI_SPEED;
 extern char LCDAttrib;
-extern char LCDInvert;
+
 extern SPI_HandleTypeDef GenSPI;
 #define SPIsend(a) {uint8_t b=a;HAL_SPI_Transmit(&GenSPI,&b,1,500);}
 #define SPIqueue(a) {HAL_SPI_Transmit(&GenSPI,a,2,500);}
@@ -94,7 +94,7 @@ void MIPS16 ConfigDisplaySPI(char *p) {
 	int p1, p2, p3;
 	int DISPLAY_TYPE=0;
 	char code;
-    getargs(&p, 9, ",");
+    getargs(&p, 11, ",");
     if(!(argc == 7 || argc == 9)) error("Argument count or display type");
 
     if(checkstring(argv[0], "ILI9341")) {
@@ -109,6 +109,8 @@ void MIPS16 ConfigDisplaySPI(char *p) {
    // 	DISPLAY_TYPE = ILI9486;
     } else if(checkstring(argv[0], "ILI9488")) {
     	DISPLAY_TYPE = ILI9488;
+    } else if(checkstring(argv[0], "ST7796S")) {
+     	DISPLAY_TYPE = ST7796S;
     } else if(checkstring(argv[0], "ST7789")) {
     	DISPLAY_TYPE = ST7789;
     } else if(checkstring(argv[0], "ST7735")) {
@@ -137,14 +139,22 @@ void MIPS16 ConfigDisplaySPI(char *p) {
 	if(code)p2=codemap(code, p2);
     CheckPin(p1, CP_IGNORE_INUSE);
     CheckPin(p2, CP_IGNORE_INUSE);
-    if(argc == 9) {
+   // if(argc == 9) {
+   	if(argc>=9 && *argv[8]){
     	if((code=codecheck(argv[8])))argv[8]+=2;
     	p3 = getinteger(argv[8]);
     	if(code)p3=codemap(code, p3);
         CheckPin(p3, CP_IGNORE_INUSE);
         Option.LCD_CS = p3;
-    } else
+    } else{
         Option.LCD_CS = 0;
+    }
+   	if(argc == 11){
+    	if(checkstring(argv[10],"INVERT"))Option.BGR=1;
+    }else{
+    	Option.BGR=0;
+
+    }
 
     Option.LCD_CD = p1;
     Option.LCD_Reset = p2;
@@ -241,8 +251,8 @@ static const uint8_t
     };                    // 255 = 500 ms delay
 
 static const uint8_t
-ILI9488Init[] = {                        // Initialization commands for ILI9488 screens
-	    16,                              // 16 commands in list:
+ILI9488InitA[] = {                        // Initialization commands for ILI9488 screens
+	    13,                              // 13 commands in list:
         0xe0,15,0x00,0x03,0x09,0x08,0x16,0x0a,0x3f,0x78,0x4c,0x09,0x0a,0x08,0x16,0x1a,0x0f,  // positive Gamma Control
         0xe1,15,0x00,0x16,0x19,0x03,0x0f,0x05,0x32,0x45,0x46,0x04,0x0e,0x0d,0x35,0x37,0x0f,   // Negative Gamma Control
         0XC0,2,0x17,0x15,                // Power Control 1
@@ -256,10 +266,35 @@ ILI9488Init[] = {                        // Initialization commands for ILI9488 
         0xB6,3,0x02,0x02,0x3B,           // Display Function Control
         0xB7,1,0xc6,                     // Entry Mode Set
         0xF7,4,0xa9,0x51,0x2c,0x82,      // Adjust Control 3
+};
+static const uint8_t
+ILI9488InitB[] = {                        // Initialization commands for ILI9488 screens
+	    3,                              // 3 commands in list:
         ILI9341_NORMALDISP,0,
-                                         //spi_write_command(0x34); //Tearing Effect Off
         0x11,DELAY,120,                  //uSec( 120000); //Exit Sleep
         0x29,DELAY,25                    //uSec(25000);  //Display on
+};
+
+
+//https://github.com/Bodmer/TFT_eSPI/discussions/898
+static const uint8_t
+ST7796SInitA[] = {                        // Initialization commands for ST7796S screens
+	    8,                                // 8 commands in list:
+        0xC5,1,0x1c,                      // VCOM Control
+        0x3A,1,0x55,                      // Pixel Interface Format // rgb565 bit colour for SPI
+        0xB0,DELAY,150,                   // Interface Mode Control + delay 150000us
+        0xB4,1,0x01,                      // Display Inversion Control
+        0xB6,3,0x80,0x02,0x3B,            // Display Function Control
+        0xB7,1,0xc6,                      // Entry Mode Set  [06]
+	    0xF0,1,0xc3,                      // Lock manufactures commands
+		0xF0,1,0x96,                      // Lock manufactures commands
+};
+static const uint8_t
+ST7796SInitB[] = {                        // Initialization commands for ILI9488 screens
+	    2,                              // 3 commands in list:
+        //ILI9341_NORMALDISP,0,
+        0x11,DELAY,150,                  //uSec( 150000); //Exit Sleep
+        0x29,DELAY,150                    //uSec(150000);  //Display on
 };
 
 
@@ -487,7 +522,19 @@ void MIPS16 InitDisplaySPI(int fullinit) {
                DisplayHRes = 480;
                DisplayVRes = 320;
                ResetController();
-               SendCommandBlock(ILI9488Init);  //send the block of commands
+               SendCommandBlock(ILI9488InitA);  //send the block of commands
+               if(Option.BGR)spi_write_cd(ILI9341_INVERTON,1,0);  //INVERT  ILI9488
+               SendCommandBlock(ILI9488InitB);  //send the block of commands
+
+               break;
+         case ST7796S:
+         	   LCDAttrib=3;  //B0=ReadBuffer B1=RGB565Send  B2=RGBRecv
+               DisplayHRes = 480;
+               DisplayVRes = 320;
+               ResetController();
+               SendCommandBlock(ST7796SInitA);  //send the block of commands
+               if(Option.BGR)spi_write_cd(ILI9341_INVERTON,1,0);  //INVERT ST7796S
+               SendCommandBlock(ST7796SInitB);  //send the block of commands
 
                break;
 /*
@@ -530,7 +577,7 @@ void MIPS16 InitDisplaySPI(int fullinit) {
 		       DisplayVRes = 240;
 		       ResetController();
      	       SendCommandBlock(ILI9341Init1);  //send the block of commands
-     	       if (LCDInvert)spi_write_cd(ILI9341_INVERTON,1,0);
+     	       if (Option.BGR)spi_write_cd(ILI9341_INVERTON,1,0);      //INVER ILI9341
      	       SendCommandBlock(ILI9341Init2);  //send the block of commands
 
 		       break;
@@ -677,7 +724,7 @@ void MIPS16 ResetController(void){
 
 
 void DefineRegionSPI(int xstart, int ystart, int xend, int yend, int rw) {
-    if(HRes == 0) error("Display not configured");
+    if(HRes == 0) StandardError(4);//error("Display not configured");
     if(Option.DISPLAY_TYPE == ST7789){
         if(Option.DISPLAY_ORIENTATION==1){   //L
     	          xstart+=1;
@@ -830,7 +877,85 @@ void DrawRectangleSPI(int x1, int y1, int x2, int y2, int c){
     SpiCsHigh(Option.LCD_CS);                                       //set CS high
 }
 
+//https://github.com/Bodmer/TFT_eSPI/issues/731  Issue with ST7796S ???
+void ReadBufferSPI(int x1, int y1, int x2, int y2, char* p) {
+    int r, N, t;
+    unsigned char h,l;
 
+	// make sure the coordinates are kept within the display area
+    if(x2 <= x1) { t = x1; x1 = x2; x2 = t; }
+    if(y2 <= y1) { t = y1; y1 = y2; y2 = t; }
+    if(x1 < 0) x1 = 0;
+    if(x1 >= HRes) x1 = HRes - 1;
+    if(x2 < 0) x2 = 0;
+    if(x2 >= HRes) x2 = HRes - 1;
+    if(y1 < 0) y1 = 0;
+    if(y1 >= VRes) y1 = VRes - 1;
+    if(y2 < 0) y2 = 0;
+    if(y2 >= VRes) y2 = VRes - 1;
+   // N=(x2- x1+1) * (y2- y1+1) * 3;
+    N=(x2- x1+1) * (y2- y1+1) * (Option.DISPLAY_TYPE==ST7796S ? 2 : 3);
+    if(!(Option.DISPLAY_TYPE==ST7796S))spi_write_cd(ILI9341_PIXELFORMAT,1,0x66); //change to RGB666 for read
+    //spi_write_cd(ILI9341_PIXELFORMAT,1,0x66); //change to RGB666 for read
+    //PinSetBit(Option.LCD_CS, LATCLR);
+    set_cs();
+    //SpiCsLow(Option.LCD_CS, LCDREAD_SPI_SPEED);  //Need to set read speed slower for most SPI displays
+    DefineRegionSPI(x1, y1, x2, y2, 0);    //DefineRegionSPI when rw=0 doesnot change CS so needs to be set.
+    SPISpeedSet(LCDREAD_SPI_SPEED);
+  // SPISpeedSet( (Option.DISPLAY_TYPE==ILI9488  || Option.DISPLAY_TYPE == ILI9488P || Option.DISPLAY_TYPE==ST7789B || Option.DISPLAY_TYPE==ILI9481IPS) ? ST7789RSpeed : SPIReadSpeed); //need to slow SPI for read on this display
+   // HAL_SPI_TransmitReceive(&GenSPI,&h,&l,1,500);  //Dummy Read
+  //  HAL_SPI_TransmitReceive(&GenSPI,&h,(uint8_t *)p,1,500);  //Dummy Read
+    HAL_SPI_Receive(&GenSPI,(uint8_t *)p,1,500);   //Dummy Read as per picomite
+   // HAL_SPI_Receive(&GenSPI,(uint8_t *)&l,1,500);   //Dummy Read as per picomite
+    r=0;
+	HAL_SPI_Receive(&GenSPI,(uint8_t *)p,N,500);   //Now read the data
+	//if(Option.DISPLAY_TYPE==ST7796S && N!=2)HAL_SPI_TransmitReceive(&GenSPI,&h,&l,1,500);  //Dummy Read  TEMP found on internet?
+	//if(Option.DISPLAY_TYPE==ST7796S && N!=2){ HAL_SPI_Receive(&GenSPI,(uint8_t *)&l,1,500);}   //Dummy Read as per picomite
+
+    //PinSetBit(Option.LCD_CD, LATCLR);        //Already done by DefineRegion
+    SpiCsHigh(Option.LCD_CS);                  //set CS high
+    SPISpeedSet(LCD_SPI_SPEED);    //Goback to normal speed
+   // SPISpeedSet(Option.DISPLAY_TYPE);
+    // restore RGB565 mode if required
+   // if(Option.DISPLAY_TYPE == ILI9341 || Option.DISPLAY_TYPE == ILI9481){
+    if(LCDAttrib & 0x2){
+      spi_write_cd(ILI9341_PIXELFORMAT,1,0x55); //change back to rdb565
+    }
+    r=0;
+    if(Option.DISPLAY_TYPE==ST7796S){
+    		int n=(x2- x1+1) * (y2- y1+1)*3;
+    		//PIntHC(h);PIntHC(l);PRet();
+    		//PInt(N);PRet();
+    		//h=(uint8_t)p[N-2];
+    		//l=(uint8_t)p[N-1];
+    		//PIntHC(h);PIntHC(l);PRet();
+    		//N=N+1;
+    		while(N){
+    			h=(uint8_t)p[N-2];
+    			l=(uint8_t)p[N-1];
+    			N-=2;
+    			p[n-1]=(uint8_t)h & 0xF8;
+    			p[n-2]=(uint8_t)((h & 0x7)<<5) | ((l & 0xE0)>>3);
+    			p[n-3]=(uint8_t)(l & 0x1F)<<3;
+    			n-=3;
+    		}
+
+   	} else {
+        // reading RGB666 need to convert to BGR565
+
+          while(N) {
+            h=(uint8_t)p[r+2];
+            l=(uint8_t)p[r];
+            p[r]=(int8_t)(h & 0xF8);
+            p[r+2]=(int8_t)(l & 0xF8);
+            p[r+1]=p[r+1] & 0xFC;
+            r+=3;
+            N-=3;
+          }
+   }
+}
+
+/*
 void ReadBufferSPI(int x1, int y1, int x2, int y2, char* p) {
     int r, N, t;
     unsigned char h,l;
@@ -874,7 +999,7 @@ void ReadBufferSPI(int x1, int y1, int x2, int y2, char* p) {
         N-=3;
     }
 }
-
+*/
 void DrawBufferSPI(int x1, int y1, int x2, int y2, char* p) {
 	volatile int i, j, k, t;
 	unsigned char rgb565=0;
@@ -1099,7 +1224,7 @@ void DrawBitmapSPI(int x1, int y1, int width, int height, int scale, int fc, int
 
 // the default function for DrawRectangle() and DrawBitmap()
 void DisplayNotSet(void) {
-    error("Display not configured");
+    StandardError(4);//error("Display not configured");
 }
 
 
@@ -1133,6 +1258,14 @@ void SPISpeedSet(int speed){
     		GenSPI.Init.CLKPhase =  SPI_PHASE_1EDGE;
     		GenSPI.Init.BaudRatePrescaler = (Option.DISPLAY_TYPE==ILI9481 ? SPI_BAUDRATEPRESCALER_4 : SPI_BAUDRATEPRESCALER_2);  //21MHz or 42MHZ
     		if(Option.DISPLAY_TYPE==ILI9481IPS)GenSPI.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4;
+
+    	}else if(speed==LCDREAD_SPI_SPEED){
+        	CurrentSPISpeed=LCDREAD_SPI_SPEED;
+        	GenSPI.Init.CLKPolarity = SPI_POLARITY_LOW;
+        	GenSPI.Init.CLKPhase =  SPI_PHASE_1EDGE;
+        	//GenSPI.Init.BaudRatePrescaler = (Option.DISPLAY_TYPE==ILI9481 ? SPI_BAUDRATEPRESCALER_4 : SPI_BAUDRATEPRESCALER_2);  //21MHz or 42MHZ
+        	GenSPI.Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_4 ;    //21MHz
+
 
     	} else if(speed==SD_SLOW_SPI_SPEED){
     		CurrentSPISpeed=SD_SLOW_SPI_SPEED;

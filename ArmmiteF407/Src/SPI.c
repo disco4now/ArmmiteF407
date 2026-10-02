@@ -97,8 +97,8 @@ void cmd_spi(void) {
     }
 
     p = checkstring(cmdline, "OPEN");
-    if(p == NULL) error("Invalid syntax");
-    if(ExtCurrentConfig[SPI_OUT_PIN] == EXT_COM_RESERVED) error("Already open");
+    if(p == NULL) SyntaxError();//error("Invalid syntax");
+    if(ExtCurrentConfig[SPI_OUT_PIN] == EXT_COM_RESERVED) StandardError(14);//error("Already open");
 
     { // start a new block for getargs()
     	int mode,bits=8;
@@ -217,8 +217,8 @@ void cmd_spi2(void) {
     }
 
     p = checkstring(cmdline, "OPEN");
-    if(p == NULL) error("Invalid syntax");
-    if(ExtCurrentConfig[SPI2_OUT_PIN] == EXT_COM_RESERVED) error("Already open");
+    if(p == NULL) SyntaxError();//error("Invalid syntax");
+    if(ExtCurrentConfig[SPI2_OUT_PIN] == EXT_COM_RESERVED) StandardError(14);//error("Already open");
 
     { // start a new block for getargs()
     	int mode,bits=8;
@@ -300,7 +300,7 @@ unsigned int *GetSendDataList(char *p, unsigned int *nbr) {
     void *ptr;
 
     getargs(&p, MAX_ARG_COUNT, ",");
-    if(!(argc & 1)) error("Invalid syntax");
+    if(!(argc & 1)) SyntaxError();//error("Invalid syntax");
     *nbr = getint(argv[0], 0, 9999999);
     if(!*nbr) return NULL;
     buf = GetTempMemory(*nbr * sizeof(unsigned int));
@@ -309,11 +309,11 @@ unsigned int *GetSendDataList(char *p, unsigned int *nbr) {
     // check the correct arg count AND that the second argument looks like a variable AND it is not a function
     if(argc == 3 && isnamestart(*argv[2]) && *skipvar(argv[2], false) == 0 && !(FindSubFun(argv[2], 1) >= 0 && strchr(argv[2], '(') != NULL)) {
     	ptr = findvar(argv[2], V_NOFIND_NULL | V_EMPTY_OK);
-		if(ptr == NULL) error("Invalid variable");
+		if(ptr == NULL)  StandardError(3);//error("Invalid variable");
 
         // now check if it is a non array string
 		if(vartbl[VarIndex].type & T_STR) {
-            if(vartbl[VarIndex].dims[0] != 0) error("Invalid variable");
+            if(vartbl[VarIndex].dims[0] != 0)  StandardError(3);//error("Invalid variable");
             if(*((char *)ptr) < *nbr) error("Insufficient data");
             ptr += sizeof(char);                                    // skip the length byte in a MMBasic string
             for (i = 0; i < *nbr; i++) {
@@ -324,9 +324,9 @@ unsigned int *GetSendDataList(char *p, unsigned int *nbr) {
 		}
 
         // if it is a MMFLOAT or integer do some sanity checks
-        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
         if(*nbr > 1) {
-            if(vartbl[VarIndex].dims[0] == 0) error("Invalid variable");
+            if(vartbl[VarIndex].dims[0] == 0)  StandardError(3);//error("Invalid variable");
             if(*nbr > (vartbl[VarIndex].dims[0] + 1 - OptionBase)) error("Insufficient data");
         }
 
@@ -363,14 +363,14 @@ long long int *GetReceiveDataBuffer(char *p, unsigned int *nbr) {
     void *ptr;
 
     getargs(&p, 3, ",");
-    if(argc != 3) error("Invalid syntax");
+    if(argc != 3) SyntaxError();//error("Invalid syntax");
     *nbr = getinteger(argv[0]);
     ptr = findvar(argv[2], V_NOFIND_NULL | V_EMPTY_OK);
-    if(ptr == NULL) error("Invalid variable");
+    if(ptr == NULL)  StandardError(3);//error("Invalid variable");
 	if((vartbl[VarIndex].type & T_INT) && vartbl[VarIndex].dims[0] > 0 && vartbl[VarIndex].dims[1] == 0) {		// integer array
         if( (((long long int *)ptr - vartbl[VarIndex].val.ia) + *nbr) > (vartbl[VarIndex].dims[0] + 1 - OptionBase) )
             error("Insufficient array size");
 	}
-        else error("Invalid variable");
+        else  StandardError(3);//error("Invalid variable");
     return ptr;
 }

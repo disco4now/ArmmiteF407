@@ -45,6 +45,16 @@ extern int keyselect;
 extern volatile int MMAbort;
 extern char SerialConDisabled;
 
+//volatile uint8_t dtr_state = 0; // 1 = Terminal Open, 0 = Terminal Closed
+volatile uint8_t USB_Host_Connected = 0; // 1 = Terminal Open, 0 = Terminal Closed
+volatile uint8_t USB_Host_Ready= 0; // 1 = RTS Ready, 0 = RTS Not Ready
+uint16_t line_state;
+/* USER CODE BEGIN PRIVATE_VARIABLES */
+//uint8_t dtr_state = 0; // Global variable to store DTR status
+/* USER CODE END PRIVATE_VARIABLES */
+
+
+
 /* USER CODE END PV */
 
 /** @addtogroup STM32_USB_OTG_DEVICE_LIBRARY
@@ -78,7 +88,11 @@ extern char SerialConDisabled;
 /* Define size for the receive and transmit buffer over CDC */
 /* It's up to user to redefine and/or remove those define */
 #define APP_RX_DATA_SIZE  512
+//#define APP_RX_DATA_SIZE  1024
 #define APP_TX_DATA_SIZE  512
+//#define APP_TX_DATA_SIZE  1024
+//#define APP_RX_DATA_SIZE  CONSOLE_RX_BUF_SIZE
+//#define APP_TX_DATA_SIZE  CONSOLE_TX_BUF_SIZE
 /* USER CODE END PRIVATE_DEFINES */
 
 /**
@@ -152,6 +166,7 @@ static int8_t CDC_Receive_FS(uint8_t* pbuf, uint32_t *Len);
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_DECLARATION */
 
+
 /* USER CODE END PRIVATE_FUNCTIONS_DECLARATION */
 
 /**
@@ -200,6 +215,9 @@ static int8_t CDC_DeInit_FS(void)
   * @param  length: Number of data to be sent (in bytes)
   * @retval Result of the operation: USBD_OK if all operations are OK else USBD_FAIL
   */
+#define CDC_DTR_MASK 0x01
+#define CDC_RTS_MASK 0x02
+
 static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
 {
   /* USER CODE BEGIN 5 */
@@ -263,9 +281,40 @@ static int8_t CDC_Control_FS(uint8_t cmd, uint8_t* pbuf, uint16_t length)
         pbuf[6] = LineCoding.datatype;
         break;
 
-    case CDC_SET_CONTROL_LINE_STATE:
+        //case CDC_SET_CONTROL_LINE_STATE:
 
-    break;
+        /****************************************************************
+        * Control Line State Request
+        ****************************************************************/
+        case CDC_SET_CONTROL_LINE_STATE:
+          // DTR is in bit 0 (LSB) of the wValue field, which is the first byte of pbuf
+          // pbuf[0] corresponds to the low byte of wValue
+          // pbuf[1] corresponds to the high byte of wValue
+          //line_state = (pbuf[3] << 8) | pbuf[2]; // Extracts wValue from the setup packet
+          line_state = (uint16_t)(pbuf[0] | (pbuf[1] << 8));
+          //uint16_t line_state;
+          // uint16_t line_state = (pbuf[3] << 8) | pbuf[2]; // Extracts wValue from the setup packet
+
+            if (line_state & CDC_DTR_MASK)
+            {
+              USB_Host_Connected = 1; // DTR is Active High, terminal is active
+            }
+            else
+            {
+              USB_Host_Connected = 0; // DTR is Low, terminal application disconnected
+            }
+            if (line_state & CDC_RTS_MASK)
+            {
+              USB_Host_Ready = 1; // DTR is Active High, terminal is active
+            }
+            else
+            {
+              USB_Host_Ready = 0; // DTR is Low, terminal application disconnected
+            }
+          // You could also handle RTS (bit 1) here if needed:
+          // uint8_t rts_state = (pbuf[0] & 0x02) >> 1;
+
+          break;
 
     case CDC_SEND_BREAK:
 
@@ -348,6 +397,24 @@ uint8_t CDC_Transmit_FS(uint8_t* Buf, uint16_t Len)
 }
 
 /* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+
+/* USER CODE BEGIN PRIVATE_FUNCTIONS_IMPLEMENTATION */
+
+/**
+  * @brief  CDC_Get_DTR_State
+  *         Helper function to get the current DTR state from main application
+  * @retval DTR state (1 if port open, 0 if closed)
+  */
+uint8_t CDC_Get_DTR_State(void)
+{
+  return USB_Host_Connected;
+}
+uint8_t CDC_Get_RTS_State(void)
+{
+  return USB_Host_Connected;
+}
+
+/* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 
 /* USER CODE END PRIVATE_FUNCTIONS_IMPLEMENTATION */
 

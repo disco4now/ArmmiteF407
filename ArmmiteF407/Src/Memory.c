@@ -148,7 +148,7 @@ void MIPS16 cmd_memory(void) {
     tp = checkstring(cmdline, (char *)"PACK");
     if(tp){
         getargs(&tp,7,(char *)",");
-        if(argc!=7)error("Syntax");
+        if(argc!=7)SyntaxError();
         int i,n=getinteger(argv[4]);
         if(n<=0)return;
         int size=getint(argv[6],1,32);
@@ -209,7 +209,7 @@ void MIPS16 cmd_memory(void) {
         int sourcesize;
         int64_t *aint;
         getargs(&tp,5,( char *)",");
-        if(!(argc==5))error("Syntax");
+        if(!(argc==5))SyntaxError();
 	    if(*argv[0] == '#') argv[0]++;
 		int fnbr = getint(argv[0],1,MAXOPENFILES);	// get the number
         int n=getinteger(argv[2]);
@@ -233,7 +233,7 @@ void MIPS16 cmd_memory(void) {
         int sourcesize;
         int64_t *aint;
         getargs(&tp,5,(char *)",");
-        if(!(argc==5))error("Syntax");
+        if(!(argc==5))SyntaxError();
 	    if(*argv[0] == '#') argv[0]++;
 		int fnbr = getint(argv[0],1,MAXOPENFILES);	// get the number
         int n=getinteger(argv[2]);
@@ -255,7 +255,7 @@ void MIPS16 cmd_memory(void) {
     tp = checkstring(cmdline, (char *)"UNPACK");
     if(tp){
         getargs(&tp,7,(char *)",");
-        if(argc!=7)error("Syntax");
+        if(argc!=7)SyntaxError();
         int i,n=getinteger(argv[4]);
         if(n<=0)return;
         int size=getint(argv[6],1,32);
@@ -318,7 +318,7 @@ void MIPS16 cmd_memory(void) {
     	if((p = checkstring(tp, (char *)"INTEGER"))) {
     		int stepin=1, stepout=1;
         	getargs(&p,9,(char *)",");
-        	if(argc<5)error("Syntax");
+        	if(argc<5)SyntaxError();
         	int n=getinteger(argv[4]);
         	if(n<=0)return;
          	uint64_t *from=(uint64_t *)GetPokeAddr(argv[0]);
@@ -350,7 +350,7 @@ void MIPS16 cmd_memory(void) {
     	if((p = checkstring(tp, (char *)"FLOAT"))) {
     		int stepin=1, stepout=1;
         	getargs(&p,9,(char *)","); //assume byte
-        	if(argc<5)error("Syntax");
+        	if(argc<5)SyntaxError();
         	int n=getinteger(argv[4]);
         	if(n<=0)return;
         	MMFLOAT *from=(MMFLOAT *)GetPokeAddr(argv[0]);
@@ -381,7 +381,7 @@ void MIPS16 cmd_memory(void) {
     		return;
     	}
         getargs(&tp,9,(char *)","); //assume byte
-        if(argc<5)error("Syntax");
+        if(argc<5)SyntaxError();
         int stepin=1, stepout=1;
     	char *from=(char *)GetPeekAddr(argv[0]);
     	char *to=(char *)GetPokeAddr(argv[2]);
@@ -414,7 +414,7 @@ void MIPS16 cmd_memory(void) {
     	char *p;
     	if((p = checkstring(tp, (char *)"BYTE"))) {
         	getargs(&p,5,(char *)","); //assume byte
-        	if(argc!=5)error("Syntax");
+        	if(argc!=5)SyntaxError();
          	char *to=(char *)GetPokeAddr(argv[0]);
          	int val=getint(argv[2],0,255);
         	int n=getinteger(argv[4]);
@@ -424,7 +424,7 @@ void MIPS16 cmd_memory(void) {
     	}
     	if((p = checkstring(tp, (char *)"SHORT"))) {
         	getargs(&p,5,(char *)","); //assume byte
-        	if(argc!=5)error("Syntax");
+        	if(argc!=5)SyntaxError();
          	short *to=(short *)GetPokeAddr(argv[0]);
         	if((uint32_t)to % 2)error("Address not divisible by 2");
         	short *q=to;
@@ -439,7 +439,7 @@ void MIPS16 cmd_memory(void) {
     	}
     	if((p = checkstring(tp, (char *)"WORD"))) {
         	getargs(&p,5,(char *)","); //assume byte
-        	if(argc!=5)error("Syntax");
+        	if(argc!=5)SyntaxError();
          	unsigned int *to=(unsigned int *)GetPokeAddr(argv[0]);
         	if((uint32_t)to % 4)error("Address not divisible by 4");
         	unsigned int *q=to;
@@ -455,7 +455,7 @@ void MIPS16 cmd_memory(void) {
     	if((p = checkstring(tp, (char *)"INTEGER"))) {
     		int stepin=1;
         	getargs(&p,7,(char *)",");
-        	if(argc<5)error("Syntax");
+        	if(argc<5)SyntaxError();
          	uint64_t *to=(uint64_t *)GetPokeAddr(argv[0]);
         	if((uint32_t)to % 8)error("Address not divisible by 8");
         	int64_t data;
@@ -475,7 +475,7 @@ void MIPS16 cmd_memory(void) {
     	if((p = checkstring(tp, (char *)"FLOAT"))) {
     		int stepin=1;
         	getargs(&p,7,(char *)","); //assume byte
-        	if(argc<5)error("Syntax");
+        	if(argc<5)SyntaxError();
         	MMFLOAT *to=(MMFLOAT *)GetPokeAddr(argv[0]);
         	if((uint32_t)to % 8)error("Address not divisible by 8");
         	MMFLOAT data;
@@ -493,7 +493,7 @@ void MIPS16 cmd_memory(void) {
     		return;
     	}
     	getargs(&tp,5,(char *)","); //assume byte
-    	if(argc!=5)error("Syntax");
+    	if(argc!=5)SyntaxError();
      	char *to=(char *)GetPokeAddr(argv[0]);
      	int val=getint(argv[2],0,255);
     	int n=getinteger(argv[4]);
@@ -707,13 +707,87 @@ void m_alloc(int size) {
     if(MBitsGet(VarTableTop) & PUSED) {
         LocalIndex = 0;
         ClearTempMemory();                                          // hopefully this will give us enough memory to print the prompt
-        error("Not enough memory");
+        StandardError(24);//Not enough memory;
     }*/
 	memset(vartbl,0,MAXVARS * sizeof(struct s_vartbl));
 
 }
 
+// test the stack for overflow
+// this will probably be caused by a fault within MMBasic but it could also be
+// caused by a very complex BASIC expression
+static void inline __attribute__((always_inline)) TestStackOverflow(void) {
+	unsigned int currstack=__get_MSP();
+	if(currstack < (unsigned int)STACKLIMIT){
+		error("Expression is too complex");
+	}
+}
 
+
+// Performance enhancement from Picomites.
+void *GetSystemMemory(int size) { //get memory from the bottom up
+    unsigned int n=0,j,k;
+    uint64_t *i;
+
+    unsigned char *addr;
+    TestStackOverflow();
+    j=k= (size + RAMPAGESIZE - 1)/RAMPAGESIZE;                         // nbr of pages rounded up
+    for(addr = (unsigned char *)RAMBase; addr < (unsigned char *)RAMEND - RAMPAGESIZE; addr += RAMPAGESIZE) {
+   	    if(!(MBitsGet(addr) & PUSED)) {
+            if(++n == k) {                                          // found a free slot
+            	k--;
+                MBitsSet(addr , PUSED | PLAST);     // show that this is used and the last in the chain of pages
+                  while(k--){
+                    addr-=RAMPAGESIZE;
+                    MBitsSet(addr,PUSED);
+                  }
+                  // memset(addr , 0, size);                              // zero the memory
+                  //mymemset(addr , 0, size);                              // zero the memory
+                  //  PIntH((int)addr);MMPrintString("GetSystemMemory");PRet();
+                  i=(uint64_t *)addr;
+                   while(j--){
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   	*i++ = 0;
+                   }
+                return (void *)addr;
+            }
+        } else n = 0;                                               // not enough space here so reset our count
+    }
+    LocalIndex = 0;                                                  // Allows ClearTempMemory to clear all levels
+    ClearTempMemory();                                               // hopefully this will give us enough to print the prompt
+    error("Not enough Heap memory");
+    return NULL;                                                    // keep the compiler happy
+}
 
 // get some memory from the heap
 //void *GetMemory(size_t msize) {
@@ -727,9 +801,10 @@ void m_alloc(int size) {
 // A pointer to the space is also saved in strtmp[] so that the memory can be automatically freed at the end of the command
 // StrTmpLocalIndex[] is used to track the sub/fun nesting level at which it was created
 void *GetTempMemory(int NbrBytes) {
-    if(StrTmpIndex >= MAXTEMPSTRINGS) error("Not enough memory");
+    if(StrTmpIndex >= MAXTEMPSTRINGS) StandardError(24);//Not enough memory;
     StrTmpLocalIndex[StrTmpIndex] = LocalIndex;
-    StrTmp[StrTmpIndex] = GetMemory(NbrBytes);
+    //StrTmp[StrTmpIndex] = GetMemory(NbrBytes);
+    StrTmp[StrTmpIndex] = GetSystemMemory(NbrBytes);
     TempMemoryIsChanged = true;
     return (void *)StrTmp[StrTmpIndex++];
 }
@@ -738,9 +813,10 @@ void *GetTempMemory(int NbrBytes) {
 // get a temporary string buffer
 // this is used by many BASIC string functions.  The space only lasts for the length of the command.
 void *GetTempStrMemory(void) {
-    if(StrTmpIndex >= MAXTEMPSTRINGS) error("Not enough memory");
+    if(StrTmpIndex >= MAXTEMPSTRINGS) StandardError(24);//Not enough memory;
     StrTmpLocalIndex[StrTmpIndex] = LocalIndex;
-    StrTmp[StrTmpIndex] = GetMemory(STRINGSIZE);
+   // StrTmp[StrTmpIndex] = GetMemory(STRINGSIZE);
+    StrTmp[StrTmpIndex] = GetSystemMemory(STRINGSIZE);
     TempMemoryIsChanged = true;
     return (void *)StrTmp[StrTmpIndex++];
 //    return GetTempMemory(STRINGSIZE);
@@ -813,7 +889,8 @@ void FreeMemorySafe(void **addr){
 	}
 }
 
-// test the stack for overflow
+/*
+// test the stack for overflow STACKLIMIT based on MAP file
 // this will probably be caused by a fault within MMBasic but it could also be
 // caused by a very complex BASIC expression
 static void inline __attribute__((always_inline)) TestStackOverflow(void) {
@@ -822,7 +899,7 @@ static void inline __attribute__((always_inline)) TestStackOverflow(void) {
 		error("Expression is too complex");
 	}
 }
-
+*/
 
 
 void InitHeap(void) {
@@ -916,7 +993,7 @@ void *GetMemory(size_t size) {
     // out of memory
     LocalIndex = 0;
     ClearTempMemory();                                              // hopefully this will give us enough to print the prompt
-    error("Not enough memory");
+    StandardError(24);//Not enough memory;
     return NULL;                                                    // keep the compiler happy
 }
 

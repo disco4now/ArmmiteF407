@@ -62,6 +62,8 @@ FATFS FatFs;
 DIR dj;
 FILINFO fno;
 
+bool (*linecallback)(int *imagewidth, int *imageheight, uint32_t *linedata, int *linenumber) = NULL;
+
 char FileGetChar(int fnbr);
 char FilePutChar(char c, int fnbr);
 int FileEOF(int fnbr);
@@ -69,6 +71,7 @@ char *GetCWD(void);
 void File_CloseAll(void);
 int InitSDCard(void);
 char *ChangeToDir(char *p);
+int BMPfnbr;
 void LoadImage(char *p);
 void LoadFont(char *p);
 int dirflags;
@@ -85,6 +88,7 @@ int buffpointer[MAXOPENFILES+1]={0};
 static uint32_t lastfptr[MAXOPENFILES+1]={[0 ... MAXOPENFILES ] = -1};
 uint32_t fmode[MAXOPENFILES+1]={0};
 static unsigned int bw[MAXOPENFILES+1]={[0 ... MAXOPENFILES ] = -1};
+char BreakKeySave;
 
 extern RTC_HandleTypeDef hrtc;
 #define overlap (VRes % (FontTable[gui_font >> 4][1] * (gui_font & 0b1111)) ? 0 : 1)
@@ -117,7 +121,8 @@ const int ErrorMap[] = {        0,                                  // 0
 /******************************************************************************************
 Text for the file related error messages reported by MMBasic
 ******************************************************************************************/
-const char *FErrorMsg[] = {	"Succeeded ",
+const char *FErrorMsg[] = {
+		"Succeeded ",
 		"Low level I/O error",
 		"Assertion failed",
 		"SD Card not found",
@@ -165,7 +170,7 @@ void cmd_save(void) {
         if(!InitSDCard()) return;
         if((void *)ReadBuffer == (void *)DisplayNotSet) error("SAVE IMAGE not available on this display");
         pp = getFstring(argv[0]);
-        if(argc!=1 && argc!=9)error("Syntax");
+        if(argc!=1 && argc!=9)SyntaxError();
         if(strchr(pp, '.') == NULL) strcat(pp, ".BMP");
         if(!BasicFileOpen(pp, fnbr, FA_WRITE | FA_CREATE_ALWAYS)) return;
         if(argc==1){
@@ -203,7 +208,7 @@ void cmd_save(void) {
     } else if((p = checkstring(cmdline, "DATA")) !=NULL){
 		getargs(&p,5,",");
         if(!InitSDCard()) return;
-		if(argc!=5)error("Syntax");
+		if(argc!=5)SyntaxError();
 		pp = getFstring(argv[0]);
 		if(strchr(pp, '.') == NULL) strcat(pp, ".DAT");
 		uint32_t address=(GetPeekAddr(argv[2]) & 0b11111111111111111111111111111100);
@@ -246,7 +251,7 @@ int FileLoadProgram(char *fname) {
     if(!BasicFileOpen(p, fnbr, FA_READ)) return false;
     p = buf = GetTempMemory(EDIT_BUFFER_SIZE - 256*6);          // leave space for the couple of buffers defined and the file handle
     while(!FileEOF(fnbr)) {                                     // while waiting for the end of file
-        if((p - buf) >= EDIT_BUFFER_SIZE - 256*6) error("Not enough memory");
+        if((p - buf) >= EDIT_BUFFER_SIZE - 256*6) StandardError(24);//Not enough memory;
         c = FileGetChar(fnbr) & 0x7f;
         if(IsPrint(c) || c == '\r' || c == '\n' || c == TAB) {
             if(c == TAB) c = ' ';
@@ -268,6 +273,13 @@ void cmd_load(void) {
         if(Option.Refresh)Display_Refresh();
         return;
     }
+    p = checkstring(cmdline, "BMP");
+	if(p) {
+        LoadImage(p);
+        if(Option.Refresh)Display_Refresh();
+        return;
+    }
+
 	p = checkstring(cmdline, "DATA");
 	if(p) {
 	    int fnbr;
@@ -275,7 +287,7 @@ void cmd_load(void) {
 		static FILINFO fnod;
 	    char *pp;
 		getargs(&p,3,",");
-		if(argc!=3)error("Syntax");
+		if(argc!=3)SyntaxError();
 		if(!InitSDCard()) error((char *)FErrorMsg[20]);					// setup the SD card
 		pp = getFstring(argv[0]);
 		if(strchr(pp, '.') == NULL) strcat(pp, ".DAT");
@@ -293,14 +305,14 @@ void cmd_load(void) {
 	    return;
 	}
     getargs(&cmdline, 3, ",");
-    if(!(argc & 1) || argc == 0) error("Syntax");
+    if(!(argc & 1) || argc == 0) SyntaxError();
     if(argc == 3) {
         if(toupper(*argv[2]) == 'R')
             autorun = true;
         else
-            error("Syntax");
+            SyntaxError();
     } else if(CurrentLinePtr != NULL)
-        error("Invalid in a program");
+        StandardError(23);//Invalid in a program;
 
     if(!FileLoadProgram(argv[0])) return;
 
@@ -328,7 +340,7 @@ void fun_dir(void) {
     static char pp[32];
     getargs(&ep, 3, ",");
     if(argc != 0) dirflags = -1;
-    if(!(argc <= 3)) error("Syntax");
+    if(!(argc <= 3)) SyntaxError();
 
     if(argc == 3) {
         if(checkstring(argv[2], "DIR"))
@@ -448,10 +460,10 @@ void cmd_seek(void) {
     int fnbr, idx;
     char *buff;
     getargs(&cmdline, 5, ",");
-    if(argc != 3) error("Syntax");
+    if(argc != 3) SyntaxError();
     if(*argv[0] == '#') argv[0]++;
     fnbr = getinteger(argv[0]);
-    if(fnbr < 1 || fnbr > MAXOPENFILES || FileTable[fnbr].com <= MAXCOMPORTS) error("File number");
+    if(fnbr < 1 || fnbr > MAXOPENFILES || FileTable[fnbr].com <= MAXCOMPORTS) StandardError(8);//error("File number");
     if(FileTable[fnbr].com == 0) error("File number #% is not open", fnbr);
     if(!InitSDCard()) return;
     idx = getinteger(argv[2]) - 1;
@@ -477,7 +489,7 @@ void cmd_name(void) {
     ss[1] = 0;
     {                                                               // start a new block
         getargs(&cmdline, 3, ss);                                   // getargs macro must be the first executable stmt in a block
-        if(argc != 3) error("Syntax");
+        if(argc != 3) SyntaxError();
         old = getFstring(argv[0]);                                  // get the old name
         if(old[1] == ':') *old = toupper(*old) - 'A' + '0';         // convert a DOS style disk name to FatFs device number
         new = getFstring(argv[2]);                                  // get the new name
@@ -489,7 +501,46 @@ void cmd_name(void) {
     }
 }
 
+/* LOAD BMP updated to use updated BmPDecoder.c based of Picomite version in lieu of MS version
+ * Dithering has been removed.
+*/
 
+//extern int BMP_bDecode(int x, int y, int fnbr);
+int ReadAndDisplayBMP(int fnbr, int dither_mode, int img_x_offset,int img_y_offset, int x_display, int y_display);
+void LoadImage(char *p) {
+	//int fnbr;
+    int xOrigin = 0, yOrigin = 0;
+    int xRead = 0, yRead = 0;
+    int mode = -1;
+	//int xOrigin, yOrigin;
+
+	// get the command line arguments
+	getargs(&p, 5, ",");                                            // this MUST be the first executable line in the function
+    if(argc == 0) error("Argument count");
+    if(!InitSDCard()) return;
+
+    p = getFstring(argv[0]);                                        // get the file name
+//	int maxH=PageTable[WritePage].ymax;
+
+    xOrigin = yOrigin = 0;
+    xOrigin = yOrigin = 0;
+	if(argc >= 3) xOrigin = getinteger(argv[2]);                    // get the x origin (optional) argument
+	if(argc == 5) yOrigin = getinteger(argv[4]);                    // get the y origin (optional) argument
+
+	// open the file
+	if(strchr(p, '.') == NULL) strcat(p, ".BMP");
+	//fnbr = FindFreeFileNbr();
+	BMPfnbr = FindFreeFileNbr();
+   // if(!BasicFileOpen(p, fnbr, FA_READ)) return;
+    if (!BasicFileOpen((char *)p, BMPfnbr, FA_READ)) return;
+    //BMP_bDecode(xOrigin, yOrigin, fnbr);
+    ReadAndDisplayBMP(BMPfnbr, mode, xRead, yRead, xOrigin, yOrigin);  //New interface to BmpDecoder
+
+    //FileClose(fnbr);
+    FileClose(BMPfnbr);
+}
+
+/*
 extern int BMP_bDecode(int x, int y, int fnbr);
 
 void LoadImage(char *p) {
@@ -498,7 +549,7 @@ void LoadImage(char *p) {
 
 	// get the command line arguments
 	getargs(&p, 5, ",");                                            // this MUST be the first executable line in the function
-    if(argc == 0) error("Argument count");
+    if(argc == 0) StandardError(2);//error("Argument count");
     if(!InitSDCard()) return;
 
     p = getFstring(argv[0]);                                        // get the file name
@@ -515,7 +566,7 @@ void LoadImage(char *p) {
     FileClose(fnbr);
 }
 
-
+*/
 
 #define MAXFILES 500
 typedef struct ss_flist {
@@ -543,7 +594,7 @@ void cmd_files(void) {
     char outbuff[STRINGSIZE]={0};
 	memset(&djd,0,sizeof(DIR));
 	memset(&fnod,0,sizeof(FILINFO));
-	if(CurrentLinePtr) error("Invalid in a program");
+	if(CurrentLinePtr) StandardError(23);//Invalid in a program;
 //	OptionFileErrorAbort = 0;
     fcnt = 0;
    if(*cmdline)
@@ -638,6 +689,8 @@ void cmd_files(void) {
 			#endif
 			MMPrintString("PRESS ANY KEY ...");
 			MMgetchar();
+			MMPrintString("\r                 \r");
+			ListCnt = 1;
 			Option.NoScroll=noscroll;
 			MMPrintString("\r                 \r");
 			if(Option.DISPLAY_CONSOLE){ClearScreen(gui_bcolour);CurrentX=0;CurrentY=0;}
@@ -709,7 +762,7 @@ void FileOpen(char *fname, char *fmode, char *ffnbr) {
 // it will open the file, set the FileTable[] entry and populate the file descriptor
 // it returns with true if successful or false if an error
 int BasicFileOpen(char *fname, int fnbr, int mode) {
-    if(fnbr < 1 || fnbr > MAXOPENFILES) error("File number");
+    if(fnbr < 1 || fnbr > MAXOPENFILES) StandardError(8);//error("File number");
     if(FileTable[fnbr].com != 0) error("File number already open");
     if(!InitSDCard()) return false;
     // if we are writing check the write protect pin (negative pin number means that low = write protect)
@@ -778,6 +831,15 @@ char FileGetChar(int fnbr) {
     return ch;
 }
 
+// bulk read data. For Fat file system can only be used if FileGetchar has not been called first
+int FileGetData(int fnbr, void *buff, int count, unsigned int *read)
+{
+    {
+        FSerror = f_read(FileTable[fnbr].fptr, buff, count, (UINT *)read);
+    }
+
+    return FSerror;
+}
 
 void FilePutStr(int count, char *c, int fnbr){
     unsigned int bw;

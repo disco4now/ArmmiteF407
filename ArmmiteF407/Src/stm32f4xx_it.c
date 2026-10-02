@@ -108,6 +108,7 @@ extern int keyselect;
 extern volatile int MMAbort;
 extern volatile struct option_s Option, *SOption;
 extern char SerialConDisabled;
+extern void hardfaultrestart(void);
 uint64_t TIM12count=0;
 
 /* USER CODE END EV */
@@ -134,7 +135,7 @@ void NMI_Handler(void)
 void HardFault_Handler(void)
 {
   /* USER CODE BEGIN HardFault_IRQn 0 */
-
+	hardfaultrestart();
   /* USER CODE END HardFault_IRQn 0 */
   while (1)
   {

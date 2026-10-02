@@ -155,7 +155,11 @@ int OptionBase;                                                     // track the
 int emptyarray=0;
 struct s_hash hashlist[MAXVARS/2]={0};
 int hashlistpointer=0;
-int multi=false;
+//int multi=false;
+
+uint32_t DefinedSubFunMem;         // Records memory allocated to DefinedSubFun incase of an error
+int DefinedSubFunLocalIndex;       // Records LocalIndex at start of DefinedSubFun incase of an error
+
 /*
 const char namestart[256]={
 		0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, //0
@@ -339,8 +343,8 @@ void MIPS16 InitBasic(void) {
     cmdDO=  GetCommandValue("Do");
     cmdFOR=  GetCommandValue("For");
     cmdNEXT= GetCommandValue("Next");
-    cmdComment = GetCommandValue( "/*");
-    cmdEndComment = GetCommandValue( "*/");
+   // cmdComment = GetCommandValue( "/*");
+   // cmdEndComment = GetCommandValue( "*/");
 
 //    PInt(CommandTableSize);
 //    PIntComma(TokenTableSize);
@@ -422,7 +426,7 @@ void ExecuteProgram(char *p) {
                             DefinedSubFun(false, p, i, NULL, NULL, NULL, NULL);
                         }
                         else
-                            error("Unknown command");
+                            StandardError(7);//error("Unknown command");
                     }
                 } else {
                     LocalIndex = SaveLocalIndex;                    // restore so that we can clean up any memory leaks
@@ -548,9 +552,342 @@ int FindSubFun(char *p, int type) {
     }
     return -1;
 }
+//#define OLDONE
+#define OLDPLUS
+//#define NEW1
+//#define NEW2
+#ifdef OLDPLUS
+// This function is responsible for executing a defined subroutine or function.
+// As these two are similar they are processed in the one lump of code.
+// USES NEW METHOD to GET MEMORY
+// The arguments when called are:
+//   isfun    = true if we are executing a function
+//   cmd      = pointer to the command name used by the caller (in program memory)
+//   index    = index into subfun[i] which points to the definition of the sub or funct
+//   fa, i64a, sa and typ are pointers to where the return value is to be stored (used by functions only)
+void DefinedSubFun(int isfun, char *cmd, int index, MMFLOAT *fa, long long int *i64a, char **sa, int *typ) {
+	char *p, *s, *tp, *ttp, tcmdtoken;
+	char *CallersLinePtr, *SubLinePtr = NULL;
+    char *argbuf1; char **argv1; int argc1;
+    char *argbuf2; char **argv2; int argc2;
+    char fun_name[MAXVARLEN + 1];
+	int i;
+    int ArgType, FunType;
+    int *argtype;
+    union u_argval {
+        MMFLOAT f;                                                    // the value if it is a float
+        long long int i;                                            // the value if it is an integer
+        MMFLOAT *fa;                                                  // pointer to the allocated memory if it is an array of floats
+        long long int *ia;                                          // pointer to the allocated memory if it is an array of integers
+        char *s;                                                    // pointer to the allocated memory if it is a string
+    } *argval;
+    int *argVarIndex;
+
+    // Any errors generated after gosubindex is incremented need to restore the original value
+    // Any variables created if LocalIndex was incremented also need to be cleared
+    // Memory allocated to *argval needs to be recovered.
+    // This allows unit tests to recover cleanly from skipped errors.i.e. ON ERROR SKIP
+    DefinedSubFunLocalIndex=LocalIndex;  //save the LocalIndex
 
 
+    CallersLinePtr = CurrentLinePtr;
+    SubLinePtr = subfun[index];                                     // used for error reporting
+    p =  SubLinePtr + 1;                                            // point to the sub or function definition
+    skipspace(p);
+    ttp = p;
 
+    // copy the sub/fun name from the definition into temp storage and terminate
+    // p is left pointing to the end of the name (ie, start of the argument list in the definition)
+    CurrentLinePtr = SubLinePtr;                                    // report errors at the definition
+    tp = fun_name;
+    *tp++ = *p++; while(isnamechar(*p)) *tp++ = *p++;
+    if(*p == '$' || *p == '%' || *p == '!') {
+        if(!isfun) {
+            error("Type specification is invalid: @", (int)(*p));
+        }
+        *tp++ = *p++;
+    }
+    *tp = 0;
+    strcpy(CurrentSubFunName, fun_name);
+
+    if(isfun && *p != '(' && (*SubLinePtr != cmdCFUN)) error("Function definition");
+
+    // find the end of the caller's identifier, tp is left pointing to the start of the caller's argument list
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    tp = cmd + 1;
+    while(isnamechar(*tp)) tp++;
+    if(*tp == '$' || *tp == '%' || *tp == '!') {
+        if(!isfun) error("Type specification");
+        tp++;
+    }
+    if(toupper(*(p-1)) != toupper(*(tp-1))) error("Inconsistent type suffix");
+
+    // if this is a function we check to find if the function's type has been specified with AS <type> and save it
+    CurrentLinePtr = SubLinePtr;                                    // report errors at the definition
+    FunType = T_NOTYPE;
+    if(isfun) {
+        ttp = skipvar(ttp, false);                                  // point to after the function name and bracketed arguments
+        skipspace(ttp);
+        if(*ttp == tokenAS) {                                       // are we using Microsoft syntax (eg, AS INTEGER)?
+            ttp++;                                                  // step over the AS token
+            ttp = CheckIfTypeSpecified(ttp, &FunType, true);        // get the type
+            if(!(FunType & T_IMPLIED)) error("Variable type");
+        }
+        FunType |= (V_FIND | V_DIM_VAR | V_LOCAL | V_EMPTY_OK);
+    }
+
+
+    // from now on
+    // tp  = the caller's argument list
+    // p   = the argument list for the definition
+    skipspace(tp); skipspace(p);
+
+    // if this is a CFUNCTION we can skip all the rest and just execute the CFUNCTION and return its value
+        if(*SubLinePtr == cmdCFUN) {
+            skipspace(p);
+            if(*p != '(')
+                *typ = T_INT;
+            else {                                                      // find the type
+                char *pp = p;
+                while(*pp != ')' && *pp != 0) pp++;
+                if(*pp == 0) SyntaxError();
+                pp++; skipspace(pp);
+                CheckIfTypeSpecified(pp, typ, false);
+                *typ &= ~T_IMPLIED;
+            }
+            switch(*typ) {                                              // return the correct type of value
+                union {
+                    float ftmp;
+                    int itmp;
+                } u;
+                case T_INT:  *i64a = CallCFunction(SubLinePtr, tp, p, CallersLinePtr); break;
+                case T_NBR:  u.itmp = (int)CallCFunction(SubLinePtr, tp, p, CallersLinePtr);
+                             *fa = u.ftmp;
+                            // #if !defined(MX170)
+                            //   RoundDoubleFloat(fa);
+                            // #endif
+                             break;
+                case T_STR:  *sa = (char *)((unsigned int)CallCFunction(SubLinePtr, tp, p, CallersLinePtr)); break;
+            }
+            TempMemoryIsChanged = true;                                 // signal that temporary memory should be checked
+            return;
+        }
+
+    // similar if this is a CSUB
+    if(*SubLinePtr == cmdCSUB) {
+        CallCFunction(SubLinePtr, tp, p, CallersLinePtr);           // run the CSUB
+        TempMemoryIsChanged = true;                                 // signal that temporary memory should be checked
+        return;
+    }
+
+    // from now on we have a user defined sub or function (not a C routine)
+
+    if(gosubindex >= MAXGOSUB) error("Too many nested SUB/FUN");
+    errorstack[gosubindex] = CallersLinePtr;
+	gosubstack[gosubindex++] = isfun ? NULL : nextstmt;             // NULL signifies that this is returned to by ending ExecuteProgram()
+
+    #define buffneeded MAX_ARG_COUNT*(sizeof(union u_argval)+ 2*sizeof(int)+3*sizeof(char *)/*+sizeof(char)*/)+ 2*STRINGSIZE
+    // allocate memory for processing the arguments
+    argval=GetSystemMemory(buffneeded);
+    DefinedSubFunMem=(uint32_t)argval;      //save pointer to memory for cleanup on error
+    argtype=(void *)argval+MAX_ARG_COUNT * sizeof(union u_argval);
+    argVarIndex = (void *)argtype+MAX_ARG_COUNT * sizeof(int);
+    argbuf1 = (void *)argVarIndex+MAX_ARG_COUNT * sizeof(int);
+    argv1 = (void *)argbuf1+STRINGSIZE;
+    argbuf2 = (void *)argv1+MAX_ARG_COUNT * sizeof(char *);
+    argv2 = (void *)argbuf2+STRINGSIZE;
+   //argbyref=(void *)argv2+MAX_ARG_COUNT * sizeof(char *);
+	/*
+   // allocate memory for processing the arguments
+    argval = GetTempMemory(MAX_ARG_COUNT * sizeof(union u_argval));
+    argtype = GetTempMemory(MAX_ARG_COUNT * sizeof(int));
+    argVarIndex = GetTempMemory(MAX_ARG_COUNT * sizeof(int));
+    argbuf1 = GetTempMemory(STRINGSIZE); argv1 = GetTempMemory(MAX_ARG_COUNT * sizeof(char *));  // these are for the caller
+    argbuf2 = GetTempMemory(STRINGSIZE); argv2 = GetTempMemory(MAX_ARG_COUNT * sizeof(char *));  // and these for the definition of the sub or function
+    */
+    // now split up the arguments in the caller
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    argc1 = 0;
+    if(*tp) makeargs(&tp, MAX_ARG_COUNT, argbuf1, argv1, &argc1, (*tp == '(') ? "(," : ",");
+
+    // split up the arguments in the definition
+    CurrentLinePtr = SubLinePtr;                                    // any errors must be at the definition
+    argc2 = 0;
+    if(*p) makeargs(&p, MAX_ARG_COUNT, argbuf2, argv2, &argc2, (*p == '(') ? "(," : ",");
+
+    // error checking
+    if(argc2 && (argc2 & 1) == 0) error("Argument list");
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    if(argc1 > argc2 || (argc1 && (argc1 & 1) == 0)) error("Argument list");
+
+	// step through the arguments supplied by the caller and get the value supplied
+    // these can be:
+    //    - missing (ie, caller did not supply that parameter)
+    //    - a variable, in which case we need to get a pointer to that variable's data and save its index so later we can get its type
+    //    - an expression, in which case we evaluate the expression and get its value and type
+    for(i = 0; i < argc2; i += 2) {                                 // count through the arguments in the definition of the sub/fun
+        if(i < argc1 && *argv1[i]) {
+            // check if the argument is a valid variable
+            if(i < argc1 && isnamestart(*argv1[i]) && *skipvar(argv1[i], false) == 0) {
+                // yes, it is a variable (or perhaps a user defined function which looks the same)?
+                if(!(FindSubFun(argv1[i], 1) >= 0 && strchr(argv1[i], '(') != NULL)) {
+                    // yes, this is a valid variable.  set argvalue to point to the variable's data and argtype to its type
+                    argval[i].s = findvar(argv1[i], V_FIND | V_EMPTY_OK);        // get a pointer to the variable's data
+                    argtype[i] = vartbl[VarIndex].type;                          // and the variable's type
+                    argVarIndex[i] = VarIndex;
+                    if(argtype[i] & T_CONST) {
+                        argtype[i] = 0;                                          // we don't want to point to a constant
+                    } else {
+                        argtype[i] |= T_PTR;                                     // flag this as a pointer
+                    }
+                }
+            }
+
+            // if argument is present and is not a pointer to a variable then evaluate it as an expression
+            if(argtype[i] == 0) {
+                long long int ia;
+                evaluate(argv1[i], &argval[i].f, &ia, &s, &argtype[i], false);   // get the value and type of the argument
+                if(argtype[i] & T_INT)
+                    argval[i].i = ia;
+                else if(argtype[i] & T_STR) {
+                    argval[i].s = GetTempStrMemory();
+                    Mstrcpy(argval[i].s, s);
+                }
+            }
+        }
+    }
+
+    // now we step through the parameters in the definition of the sub/fun
+    // for each one we create the local variable and compare its type to that supplied in the callers list
+    CurrentLinePtr = SubLinePtr;                                    // any errors must be at the definition
+    LocalIndex++;
+    for(i = 0; i < argc2; i += 2) {                                 // count through the arguments in the definition of the sub/fun
+        ArgType = T_NOTYPE;
+        tp = skipvar(argv2[i], false);                              // point to after the variable
+        skipspace(tp);
+        if(*tp == tokenAS) {                                        // are we using Microsoft syntax (eg, AS INTEGER)?
+            *tp++ = 0;                                              // terminate the string and step over the AS token
+            tp = CheckIfTypeSpecified(tp, &ArgType, true);          // and get the type
+            if(!(ArgType & T_IMPLIED)) error("Variable type");
+        }
+        ArgType |= (V_FIND | V_DIM_VAR | V_LOCAL | V_EMPTY_OK);
+        tp = findvar(argv2[i], ArgType);                            // declare the local variable
+        if(vartbl[VarIndex].dims[0] > 0) error("Argument list");    // if it is an array it must be an empty array
+
+        CurrentLinePtr = CallersLinePtr;                            // report errors at the caller
+
+        // if the definition called for an array, special processing and checking will be required
+        if(vartbl[VarIndex].dims[0] == -1) {
+            int j;
+            if(vartbl[argVarIndex[i]].dims[0] == 0) error("Expected an array");
+            if(TypeMask(vartbl[VarIndex].type) != TypeMask(argtype[i])) error("Incompatible type: $", argv1[i]);
+            vartbl[VarIndex].val.s = NULL;
+            for(j = 0; j < MAXDIM; j++)                             // copy the dimensions of the supplied variable into our local variable
+                vartbl[VarIndex].dims[j] = vartbl[argVarIndex[i]].dims[j];
+        }
+
+        // if this is a pointer check and the type is NOT the same as that requested in the sub/fun definition
+        if((argtype[i] & T_PTR) && TypeMask(vartbl[VarIndex].type) != TypeMask(argtype[i])) {
+            if((TypeMask(vartbl[VarIndex].type) & T_STR) || (TypeMask(argtype[i]) & T_STR))
+                error("Incompatible type: $", argv1[i]);
+            // make this into an ordinary argument
+            if(vartbl[argVarIndex[i]].type & T_PTR) {
+                argval[i].i = *vartbl[argVarIndex[i]].val.ia;       // get the value if the supplied argument is a pointer
+            } else {
+                argval[i].i = *(long long int *)argval[i].s;        // get the value if the supplied argument is an ordinary variable
+            }
+            argtype[i] &= ~T_PTR;                                   // and remove the pointer flag
+        }
+
+        // if this is a pointer (note: at this point the caller type and the required type must be the same)
+        if(argtype[i] & T_PTR) {
+            // the argument supplied was a variable so we must setup the local variable as a pointer
+            if((vartbl[VarIndex].type & T_STR) && vartbl[VarIndex].val.s != NULL) {
+                FreeMemory(vartbl[VarIndex].val.s);                            // free up the local variable's memory if it is a pointer to a string
+                }
+            vartbl[VarIndex].val.s = argval[i].s;                              // point to the data of the variable supplied as an argument
+            vartbl[VarIndex].type |= T_PTR;                                    // set the type to a pointer
+            vartbl[VarIndex].size = vartbl[argVarIndex[i]].size;               // just in case it is a string copy the size
+        // this is not a pointer
+        } else if(argtype[i] != 0) {                                           // in getting the memory argtype[] is initialised to zero
+            // the parameter was an expression or a just straight variables with different types (therefore not a pointer))
+            if((vartbl[VarIndex].type & T_STR) && (argtype[i] & T_STR)) {      // both are a string
+                Mstrcpy(vartbl[VarIndex].val.s, argval[i].s);
+                ClearSpecificTempMemory(argval[i].s);
+            } else if((vartbl[VarIndex].type & T_NBR) && (argtype[i] & T_NBR)) // both are a float
+                vartbl[VarIndex].val.f = argval[i].f;
+            else if((vartbl[VarIndex].type & T_NBR) && (argtype[i] & T_INT))   // need a float but supplied an integer
+                vartbl[VarIndex].val.f = argval[i].i;
+            else if((vartbl[VarIndex].type & T_INT) && (argtype[i] & T_INT))   // both are integers
+                vartbl[VarIndex].val.i = argval[i].i;
+            else if((vartbl[VarIndex].type & T_INT) && (argtype[i] & T_NBR))   // need an integer but was supplied with a MMFLOAT
+                vartbl[VarIndex].val.i = FloatToInt64(argval[i].f);
+            else
+                error("Incompatible type: $", argv1[i]);
+        }
+    }
+
+    // temp memory used in setting up the arguments can be deleted now
+   // ClearSpecificTempMemory(argval); ClearSpecificTempMemory(argtype); ClearSpecificTempMemory(argVarIndex);
+  //  ClearSpecificTempMemory(argbuf1); ClearSpecificTempMemory(argv1);
+  //  ClearSpecificTempMemory(argbuf2); ClearSpecificTempMemory(argv2);
+
+    // temp memory used in setting up the arguments can be deleted now
+       FreeMemory((void*)argval);
+       DefinedSubFunMem=0;
+
+    // if it is a defined command we simply point to the first statement in our command and allow ExecuteProgram() to carry on as before
+    // exit from the sub is via cmd_return which will decrement LocalIndex
+    if(!isfun) {
+        skipelement(p);
+        nextstmt = p;                                               // point to the body of the subroutine
+        return;
+    }
+
+    // if it is a defined function we have a lot more work to do.  We must:
+    //   - Create a local variable for the function's name
+    //   - Save the globals being used by the current command that caused the function to be called
+    //   - Invoke another instance of ExecuteProgram() to execute the body of the function
+    //   - When that returns we need to restore the global variables
+    //   - Get the variable's value and save that in the return value globals (fret or sret)
+    //   - Return to the expression parser
+    tp = findvar(fun_name, FunType | V_FUNCT);                      // declare the local variable
+    FunType = vartbl[VarIndex].type;
+    if(FunType & T_STR) {
+        FreeMemory(vartbl[VarIndex].val.s);                         // free the memory if it is a string
+        vartbl[VarIndex].type |= T_PTR;
+        LocalIndex--;                                               // allocate the memory at the previous level
+        vartbl[VarIndex].val.s = tp = GetTempMemory(STRINGSIZE);    // and use our own memory
+        LocalIndex++;
+    }
+    skipelement(p);                                                 // point to the body of the function
+
+    ttp = nextstmt;                                                 // save the globals used by commands
+    tcmdtoken = cmdtoken;
+    s = cmdline;
+
+    ExecuteProgram(p);                                              // execute the function's code
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+
+    cmdline = s;                                                    // restore the globals
+    cmdtoken = tcmdtoken;
+    nextstmt = ttp;
+
+    // return the value of the function's variable to the caller
+    if(FunType & T_NBR)
+        *fa = *(MMFLOAT *)tp;
+    else if(FunType & T_INT)
+        *i64a = *(long long int *)tp;
+    else
+        *sa = tp;                                                   // for a string we just need to return the local memory
+    *typ = FunType;                                                 // save the function type for the caller
+	ClearVars(LocalIndex--);                                        // delete any local variables
+    TempMemoryIsChanged = true;                                     // signal that temporary memory should be checked
+	gosubindex--;
+}
+#endif
+
+#ifdef OLDONE
 // This function is responsible for executing a defined subroutine or function.
 // As these two are similar they are processed in the one lump of code.
 //
@@ -637,7 +974,7 @@ void DefinedSubFun(int isfun, char *cmd, int index, MMFLOAT *fa, long long int *
             else {                                                      // find the type
                 char *pp = p;
                 while(*pp != ')' && *pp != 0) pp++;
-                if(*pp == 0) error("Syntax");
+                if(*pp == 0) SyntaxError();
                 pp++; skipspace(pp);
                 CheckIfTypeSpecified(pp, typ, false);
                 *typ &= ~T_IMPLIED;
@@ -679,6 +1016,7 @@ void DefinedSubFun(int isfun, char *cmd, int index, MMFLOAT *fa, long long int *
     argVarIndex = GetTempMemory(MAX_ARG_COUNT * sizeof(int));
     argbuf1 = GetTempMemory(STRINGSIZE); argv1 = GetTempMemory(MAX_ARG_COUNT * sizeof(char *));  // these are for the caller
     argbuf2 = GetTempMemory(STRINGSIZE); argv2 = GetTempMemory(MAX_ARG_COUNT * sizeof(char *));  // and these for the definition of the sub or function
+
 
     // now split up the arguments in the caller
     CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
@@ -856,6 +1194,861 @@ void DefinedSubFun(int isfun, char *cmd, int index, MMFLOAT *fa, long long int *
     TempMemoryIsChanged = true;                                     // signal that temporary memory should be checked
 	gosubindex--;
 }
+#endif
+
+#ifdef NEW1
+
+
+// This function is responsible for executing a defined subroutine or function.
+// As these two are similar they are processed in the one lump of code.
+//
+// The arguments when called are:
+//   isfun    = true if we are executing a function
+//   cmd      = pointer to the command name used by the caller (in program memory)
+//   index    = index into subfun[i] which points to the definition of the sub or funct
+//   fa, i64a, sa and typ are pointers to where the return value is to be stored (used by functions only)
+//   BYREF and BYVAL qualifiers added per Geoff's email
+
+
+void DefinedSubFun(int isfun, char *cmd, int index, MMFLOAT *fa, long long int *i64a, char **sa, int *typ) {
+
+	char *p, *s, *tp, *ttp, tcmdtoken;
+	char *CallersLinePtr, *SubLinePtr = NULL;
+    char *argbuf1; char **argv1; int argc1;
+    char *argbuf2; char **argv2; int argc2;
+    char *argbyref;
+    char fun_name[MAXVARLEN + 1];
+	int i;
+    int ArgType, FunType;
+    int *argtype;
+    union u_argval {
+        MMFLOAT f;                                                    // the value if it is a float
+        long long int i;                                            // the value if it is an integer
+        MMFLOAT *fa;                                                  // pointer to the allocated memory if it is an array of floats
+        long long int *ia;                                          // pointer to the allocated memory if it is an array of integers
+        char *s;                                                    // pointer to the allocated memory if it is a string
+    } *argval;
+    int *argVarIndex;
+    // Any errors generated after gosubindex is incremented need to restore the original value
+    // Any variables created if LocalIndex was incremented also need to be cleared
+    // Memory allocated to *argval needs to be recovered.
+    // This allows unit tests to recover cleanly from skipped errors.i.e. ON ERROR SKIP
+   int gosubindexsave;
+   int localindexsave;
+   gosubindexsave=gosubindex;
+   localindexsave=LocalIndex;
+    #define CLEANUP if(LocalIndex != localindexsave) ClearVars(LocalIndex);gosubindex=gosubindexsave; FreeMemory((void*)argval);
+   // #define CLEANUP if(LocalIndex != localindexsave) ClearVars(LocalIndex);gosubindex--; FreeMemory((void*)argval);
+   // #define CLEANUP ;
+
+    CallersLinePtr = CurrentLinePtr;
+    SubLinePtr = subfun[index];                                     // used for error reporting
+    p =  SubLinePtr + 1;                                            // point to the sub or function definition
+    skipspace(p);
+    ttp = p;
+
+    // copy the sub/fun name from the definition into temp storage and terminate
+    // p is left pointing to the end of the name (ie, start of the argument list in the definition)
+    CurrentLinePtr = SubLinePtr;                                    // report errors at the definition
+    tp = fun_name;
+    *tp++ = *p++; while(isnamechar(*p)) *tp++ = *p++;
+    if(*p == '$' || *p == '%' || *p == '!') {
+        if(!isfun) {
+        	error("Type specification is invalid: @", (int)(*p));
+        }
+        *tp++ = *p++;
+    }
+    *tp = 0;
+
+    if(isfun && *p != '(' && (*SubLinePtr != cmdCFUN)) error("Function definition");
+
+    // find the end of the caller's identifier, tp is left pointing to the start of the caller's argument list
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    tp = cmd + 1;
+    while(isnamechar(*tp)) tp++;
+    if(*tp == '$' || *tp == '%' || *tp == '!') {
+        if(!isfun) error("Type specification");
+        tp++;
+    }
+    if(toupper(*(p-1)) != toupper(*(tp-1)))error("Inconsistent type suffix");
+
+    // if this is a function we check to find if the function's type has been specified with AS <type> and save it
+    CurrentLinePtr = SubLinePtr;                                    // report errors at the definition
+    FunType = T_NOTYPE;
+    if(isfun) {
+        ttp = skipvar(ttp, false);                                  // point to after the function name and bracketed arguments
+        skipspace(ttp);
+        if(*ttp == tokenAS) {                                       // are we using Microsoft syntax (eg, AS INTEGER)?
+            ttp++;                                                  // step over the AS token
+            ttp = CheckIfTypeSpecified(ttp, &FunType, true);        // get the type
+            if(!(FunType & T_IMPLIED)) error("Variable type");
+        }
+        FunType |= (V_FIND | V_DIM_VAR | V_LOCAL | V_EMPTY_OK);
+    }
+
+
+    // from now on
+    // tp  = the caller's argument list
+    // p   = the argument list for the definition
+    skipspace(tp); skipspace(p);
+
+    // if this is a CFUNCTION we can skip all the rest and just execute the CFUNCTION and return its value
+           if(*SubLinePtr == cmdCFUN) {
+               skipspace(p);
+               if(*p != '(')
+                   *typ = T_INT;
+               else {                                                      // find the type
+                   char *pp = p;
+                   while(*pp != ')' && *pp != 0) pp++;
+                   if(*pp == 0) SyntaxError();
+                   pp++; skipspace(pp);
+                   CheckIfTypeSpecified(pp, typ, false);
+                   *typ &= ~T_IMPLIED;
+               }
+               switch(*typ) {                                              // return the correct type of value
+                   union {
+                       float ftmp;
+                       int itmp;
+                   } u;
+                   case T_INT:  *i64a = CallCFunction(SubLinePtr, tp, p, CallersLinePtr); break;
+                   case T_NBR:  u.itmp = (int)CallCFunction(SubLinePtr, tp, p, CallersLinePtr);
+                                *fa = u.ftmp;
+                               // #if !defined(MX170)
+                               //   RoundDoubleFloat(fa);
+                               // #endif
+                                break;
+                   case T_STR:  *sa = (char *)((unsigned int)CallCFunction(SubLinePtr, tp, p, CallersLinePtr)); break;
+               }
+               TempMemoryIsChanged = true;                                 // signal that temporary memory should be checked
+               return;
+           }
+
+
+    // similar if this is a CSUB
+    if(*SubLinePtr == cmdCSUB) {
+        CallCFunction(SubLinePtr, tp, p, CallersLinePtr);           // run the CSUB
+        TempMemoryIsChanged = true;                                 // signal that temporary memory should be checked
+        return;
+    }
+
+    // from now on we have a user defined sub or function (not a C routine)
+
+    if(gosubindex >= MAXGOSUB) error("Too many nested SUB/FUN");
+
+
+    /******************************************************************************
+    *  ANY ERRORs FROM HERE ON SHOULD  ClearVars(),restore the goosubindex and release memory for argval
+    *  i.e. use the CLEANUP sequence before calling the error.
+     ******************************************************************************/
+    errorstack[gosubindex] = CallersLinePtr;
+	gosubstack[gosubindex++] = isfun ? NULL : nextstmt;             // NULL signifies that this is returned to by ending ExecuteProgram()
+
+	#define buffneeded MAX_ARG_COUNT*(sizeof(union u_argval)+ 2*sizeof(int)+3*sizeof(char *)+sizeof(char))+ 2*STRINGSIZE
+    // allocate memory for processing the arguments
+    // argval=GetMemory(buffneeded);
+    argval=GetSystemMemory(buffneeded);
+    argtype=(void *)argval+MAX_ARG_COUNT * sizeof(union u_argval);
+    argVarIndex = (void *)argtype+MAX_ARG_COUNT * sizeof(int);
+    argbuf1 = (void *)argVarIndex+MAX_ARG_COUNT * sizeof(int);
+    argv1 = (void *)argbuf1+STRINGSIZE;
+    argbuf2 = (void *)argv1+MAX_ARG_COUNT * sizeof(char *);
+    argv2 = (void *)argbuf2+STRINGSIZE;
+    argbyref=(void *)argv2+MAX_ARG_COUNT * sizeof(char *);
+
+    // now split up the arguments in the caller
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    argc1 = 0;
+    if(*tp) makeargs(&tp, MAX_ARG_COUNT, argbuf1, argv1, &argc1, (*tp == '(') ? "(," : ",");
+
+    // split up the arguments in the definition
+    CurrentLinePtr = SubLinePtr;                                    // any errors must be at the definition
+    argc2 = 0;
+    if(*p) makeargs(&p, MAX_ARG_COUNT, argbuf2, argv2, &argc2, (*p == '(') ? "(," : ",");
+
+    // error checking
+    if(argc2 && (argc2 & 1) == 0){CLEANUP error("Argument list");}
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    if(argc1 > argc2 || (argc1 && (argc1 & 1) == 0)) {CLEANUP error("Argument list");}
+
+	// step through the arguments supplied by the caller and get the value supplied
+    // these can be:
+    //    - missing (ie, caller did not supply that parameter)
+    //    - a variable, in which case we need to get a pointer to that variable's data and save its index so later we can get its type
+    //    - an expression, in which case we evaluate the expression and get its value and type
+    for(i = 0; i < argc2; i += 2) { // count through the arguments in the definition of the sub/fun
+    	if(i < argc1 && *argv1[i]) {
+
+             // check if the argument is a valid variable
+   			 if(i < argc1 && isnamestart(*argv1[i]) && *skipvar(argv1[i], false) == 0){
+                 // yes, it is a variable (or perhaps a user defined function which looks the same)?
+                 if(!(FindSubFun(argv1[i], 1) >= 0 && strchr(argv1[i], '(') != NULL)) {
+                     // yes, this is a valid variable.  set argvalue to point to the variable's data and argtype to its type
+                	 argval[i].s = findvar(argv1[i], V_FIND | V_EMPTY_OK);        // get a pointer to the variable's data
+                     argtype[i] = vartbl[VarIndex].type;                          // and the variable's type
+                     argVarIndex[i] = VarIndex;
+                     if(argtype[i] & T_CONST) {
+                         argtype[i] = 0;                                          // we don't want to point to a constant
+                     } else {
+                    	 argtype[i] |= T_PTR;                                     // flag this as a pointer
+                     }
+                 }
+             }
+
+            // check for BYVAL or BYREF in sub/fun definition
+             argbyref[i]=0;
+             skipspace(argv2[i]);
+             if(toupper(*argv2[i]) == 'B' && toupper(*(argv2[i]+1)) == 'Y') {
+              	if((checkstring(argv2[i] + 2, "VAL")) != NULL) {      // if BYVAL
+              	    //Only if not an array remove any pointer flag in the caller
+              	    if(vartbl[argVarIndex[i]].dims[0] == 0 ){ argtype[i] = 0;}
+
+                    // Trap an array but remove pointer if an array element
+                	if(vartbl[argVarIndex[i]].dims[0] > 0){
+              	    	/*
+              	    	 * Set tp to point to the current parameter
+              	    	 * See if we have an array or an array element
+              	    	 */
+
+                		tp=argv1[i];
+                  	    do { tp++;} while(*tp != '(');  // We will always find a '(' because it must be an array or an array element to get here
+                  	    tp++;
+                  	    skipspace(tp);
+                  	    if(*tp == ')') {
+                  	    	 {CLEANUP error("Array as BYVAL not allowed $",argv1[i]);}
+                  	    }else{
+                  	        argtype[i] = 0;
+                  	    }
+                	}
+              	    argv2[i] += 5;										// skip to the variable start
+
+              	} else {
+                	if((checkstring(argv2[i] + 2, "REF")) != NULL) {    // if BYREF
+                	  if((argtype[i] & T_PTR) == 0){CLEANUP error("Variable required for BYREF $", argv1[i]);}
+                	  // Trap an array element trying for BYREF
+                  	  if(vartbl[argVarIndex[i]].dims[0] > 0){
+
+                  		tp=argv1[i];
+                  	    do {tp++;} while(*tp != '(');
+                  	    tp++;
+                  	    skipspace(tp);
+                  	    if(!(*tp == ')') ){
+                  	    	{CLEANUP error("Array Element as BYREF not allowed $",argv1[i]);}
+                  	    }
+                  	  }
+            	      argv2[i] += 5;									// skip to the variable start
+            	      argbyref[i]=1;
+               	    }
+            	}
+   			}
+
+             // if argument is present and is not a pointer to a variable then evaluate it as an expression
+            if(argtype[i] == 0) {
+                long long int ia;
+                evaluate(argv1[i], &argval[i].f, &ia, &s, &argtype[i], false);   // get the value and type of the argument
+                if(argtype[i] & T_INT)
+                    argval[i].i = ia;
+                else if(argtype[i] & T_STR) {
+                    argval[i].s = GetMemory(STRINGSIZE);
+                    Mstrcpy(argval[i].s, s);
+                }
+            }
+
+        }
+    }
+
+
+
+    // now we step through the parameters in the definition of the sub/fun
+    // for each one we create the local variable and compare its type to that supplied in the callers list
+
+    CurrentLinePtr = SubLinePtr;                                    // any errors must be at the definition
+    LocalIndex++;
+    for(i = 0; i < argc2; i += 2) {                                 // count through the arguments in the definition of the sub/fun
+        ArgType = T_NOTYPE;
+        //skip BYVAL/BYREF keywords
+
+        if(toupper(*argv2[i]) == 'B' && toupper(*(argv2[i]+1)) == 'Y') {
+        	if((checkstring(argv2[i] + 2, "VAL")) != NULL) {
+        		argv2[i] += 5;
+           	}else if((checkstring(argv2[i] + 2, "REF")) != NULL) {    // if BYREF
+        		argv2[i] += 5;									// skip to the variable start
+           	}
+        }
+
+        tp = skipvar(argv2[i], false);                              // point to after the variable
+        skipspace(tp);
+        if(*tp == tokenAS) {                                        // are we using Microsoft syntax (eg, AS INTEGER)?
+            *tp++ = 0;                                              // terminate the string and step over the AS token
+            tp = CheckIfTypeSpecified(tp, &ArgType, true);          // and get the type
+            if(!(ArgType & T_IMPLIED)){CLEANUP error("Variable type");}
+
+        }
+
+        ArgType |= (V_FIND | V_DIM_VAR | V_LOCAL | V_EMPTY_OK);
+        tp = findvar(argv2[i], ArgType);                            // declare the local variable
+        if(vartbl[VarIndex].dims[0] > 0){CLEANUP error("Argument list"); }   // if it is an array it must be an empty array
+        CurrentLinePtr = CallersLinePtr;                            // report errors at the caller
+
+        // if the definition called for an array, special processing and checking will be required
+       	if(vartbl[VarIndex].dims[0] == -1) {
+        	int j;
+            if(vartbl[argVarIndex[i]].dims[0] == 0)  {CLEANUP error("Expected an array");}
+
+            if(TypeMask(vartbl[VarIndex].type) != TypeMask(argtype[i])){CLEANUP error("Incompatible type: $", argv1[i]);}
+            vartbl[VarIndex].val.s = NULL;
+            for(j = 0; j < MAXDIM; j++)                             // copy the dimensions of the supplied variable into our local variable
+                vartbl[VarIndex].dims[j] = vartbl[argVarIndex[i]].dims[j];
+
+        }
+
+
+        // if this is a pointer check if the type is NOT the same as that requested in the sub/fun definition
+        if((argtype[i] & T_PTR) && TypeMask(vartbl[VarIndex].type) != TypeMask(argtype[i])) {
+        	if(argbyref[i]) {CLEANUP error("BYREF requires same types: $", argv1[i]);}          //BYREF requires same types.
+        	if((TypeMask(vartbl[VarIndex].type) & T_STR) || (TypeMask(argtype[i]) & T_STR))
+        	   {CLEANUP error("Incompatible type: $", argv1[i]);}
+            // make this into an ordinary argument
+            if(vartbl[argVarIndex[i]].type & T_PTR) {
+                argval[i].i = *vartbl[argVarIndex[i]].val.ia;       // get the value if the supplied argument is a pointer
+            } else {
+                argval[i].i = *(long long int *)argval[i].s;        // get the value if the supplied argument is an ordinary variable
+            }
+            argtype[i] &= ~T_PTR;                                   // and remove the pointer flag
+        }
+
+
+        // if this is a pointer (note: at this point the caller type and the required type must be the same)
+        if(argtype[i] & T_PTR) {
+            // the argument supplied was a variable so we must setup the local variable as a pointer
+            if((vartbl[VarIndex].type & T_STR) && vartbl[VarIndex].val.s != NULL) {
+                FreeMemorySafe((void *)&vartbl[VarIndex].val.s);     // free up the local variable's memory if it is a pointer to a string
+            }
+            vartbl[VarIndex].val.s = argval[i].s;                              // point to the data of the variable supplied as an argument
+            vartbl[VarIndex].type |= T_PTR;                                    // set the type to a pointer
+            vartbl[VarIndex].size = vartbl[argVarIndex[i]].size;               // just in case it is a string copy the size
+        // this is not a pointer
+        } else if(argtype[i] != 0) {                                           // in getting the memory argtype[] is initialised to zero
+            // the parameter was an expression or a just straight variables with different types (therefore not a pointer))
+            if((vartbl[VarIndex].type & T_STR) && (argtype[i] & T_STR)) {      // both are a string
+                Mstrcpy(vartbl[VarIndex].val.s, argval[i].s);
+                FreeMemorySafe((void *)&argval[i].s);
+            } else if((vartbl[VarIndex].type & T_NBR) && (argtype[i] & T_NBR)) // both are a float
+                vartbl[VarIndex].val.f = argval[i].f;
+            else if((vartbl[VarIndex].type & T_NBR) && (argtype[i] & T_INT))   // need a float but supplied an integer
+                vartbl[VarIndex].val.f = argval[i].i;
+            else if((vartbl[VarIndex].type & T_INT) && (argtype[i] & T_INT))   // both are integers
+                vartbl[VarIndex].val.i = argval[i].i;
+            else if((vartbl[VarIndex].type & T_INT) && (argtype[i] & T_NBR))   // need an integer but was supplied with a MMFLOAT
+                vartbl[VarIndex].val.i = FloatToInt64(argval[i].f);
+            else
+                {CLEANUP error("Incompatible type: $", argv1[i]);}
+        }
+
+    }
+
+
+    // temp memory used in setting up the arguments can be deleted now
+    FreeMemory((void*)argval);
+    strcpy(CurrentSubFunName, fun_name);
+    // if it is a defined command we simply point to the first statement in our command and allow ExecuteProgram() to carry on as before
+    // exit from the sub is via cmd_return which will decrement LocalIndex
+    if(!isfun) {
+        skipelement(p);
+        nextstmt = p;                                               // point to the body of the subroutine
+        return;
+    }
+
+    // if it is a defined function we have a lot more work to do.  We must:
+    //   - Create a local variable for the function's name
+    //   - Save the globals being used by the current command that caused the function to be called
+    //   - Invoke another instance of ExecuteProgram() to execute the body of the function
+    //   - When that returns we need to restore the global variables
+    //   - Get the variable's value and save that in the return value globals (fret or sret)
+    //   - Return to the expression parser
+    tp = findvar(fun_name, FunType | V_FUNCT);                      // declare the local variable
+    FunType = vartbl[VarIndex].type;
+    if(FunType & T_STR) {
+        FreeMemorySafe((void *)&vartbl[VarIndex].val.s);                         // free the memory if it is a string
+        vartbl[VarIndex].type |= T_PTR;
+        LocalIndex--;                                               // allocate the memory at the previous level
+        vartbl[VarIndex].val.s = tp = GetTempMemory(STRINGSIZE);    // and use our own memory
+        LocalIndex++;
+    }
+    skipelement(p);                                                 // point to the body of the function
+
+    ttp = nextstmt;                                                 // save the globals used by commands
+    tcmdtoken = cmdtoken;
+    s = cmdline;
+
+    ExecuteProgram(p);                                              // execute the function's code
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+
+    cmdline = s;                                                    // restore the globals
+    cmdtoken = tcmdtoken;
+    nextstmt = ttp;
+
+    // return the value of the function's variable to the caller
+    if(FunType & T_NBR)
+        *fa = *(MMFLOAT *)tp;
+    else if(FunType & T_INT)
+        *i64a = *(long long int *)tp;
+    else
+        *sa = tp;                                                   // for a string we just need to return the local memory
+    *typ = FunType;                                                 // save the function type for the caller
+	ClearVars(LocalIndex--);                                        // delete any local variables
+    TempMemoryIsChanged = true;                                     // signal that temporary memory should be checked
+	gosubindex--;
+
+}
+#endif
+
+
+#ifdef NEW2
+
+void cleanerror(int errorindex,int indexsave,int *argval,char *errmsg){
+	if(LocalIndex != indexsave) ClearVars(LocalIndex);
+	gosubindex--;
+	FreeMemory((void*)argval);
+	/*
+	if (errorindex==1) error("Argument list");
+	else if (errorindex==3) error("Array as BYVAL not allowed $",errmsg);
+	else if (errorindex==4)  error("Variable required for BYREF $",errmsg);
+	else if (errorindex==5)  error("Array Element as BYREF not allowed $",errmsg);
+	else if (errorindex==6)  error("Variable type");
+	else if (errorindex==8)  error("Expected an array");
+	else if (errorindex==9) error("Incompatible type: $", errmsg);
+	else error("BYREF requires same types: $",errmsg);
+    */
+
+
+	switch (errorindex){
+	  case 1:  error("Argument list");
+
+	 /// case 2:  error("Argument list");
+
+	  case 3:  error("Array as BYVAL not allowed $",errmsg);
+	  case 4:  error("Variable required for BYREF $",errmsg);
+	  case 5:  error("Array Element as BYREF not allowed $",errmsg);
+	  case 6:  error("Variable type");
+	 // case 7:  error("Argument list");
+	  case 8:  error("Expected an array");
+	  case 9:  error("Incompatible type: $", errmsg);
+	  case 10: error("BYREF requires same types: $",errmsg);
+	 // case 11: error("Incompatible type: $", errmsg);
+	 // case 12: error("Incompatible type: $", errmsg);
+	 // default: error("Error not defined");
+
+
+	}
+
+
+}
+
+// This function is responsible for executing a defined subroutine or function.
+// As these two are similar they are processed in the one lump of code.
+//
+// The arguments when called are:
+//   isfun    = true if we are executing a function
+//   cmd      = pointer to the command name used by the caller (in program memory)
+//   index    = index into subfun[i] which points to the definition of the sub or funct
+//   fa, i64a, sa and typ are pointers to where the return value is to be stored (used by functions only)
+//   BYREF and BYVAL qualifiers added per Geoff's email
+
+
+void DefinedSubFun(int isfun, char *cmd, int index, MMFLOAT *fa, long long int *i64a, char **sa, int *typ) {
+
+	char *p, *s, *tp, *ttp, tcmdtoken;
+	char *CallersLinePtr, *SubLinePtr = NULL;
+    char *argbuf1; char **argv1; int argc1;
+    char *argbuf2; char **argv2; int argc2;
+    char *argbyref;
+    char fun_name[MAXVARLEN + 1];
+	int i=0;
+    int ArgType, FunType;
+    int *argtype;
+    union u_argval {
+        MMFLOAT f;                                                    // the value if it is a float
+        long long int i;                                            // the value if it is an integer
+        MMFLOAT *fa;                                                  // pointer to the allocated memory if it is an array of floats
+        long long int *ia;                                          // pointer to the allocated memory if it is an array of integers
+        char *s;                                                    // pointer to the allocated memory if it is a string
+    } *argval;
+    int *argVarIndex;
+    // Any errors generated after gosubindex is incremented need to restore the original value
+    // Any variables created if LocalIndex was incremented also need to be cleared
+    // Memory allocated to *argval needs to be recovered.
+    // This allows unit tests to recover cleanly from skipped errors.i.e. ON ERROR SKIP
+   // int gosubindexsave;
+    int localindexsave;
+   // gosubindexsave=gosubindex;
+    localindexsave=LocalIndex;
+    //#define CLEANUP if(LocalIndex != localindexsave) ClearVars(LocalIndex);gosubindex=gosubindexsave; FreeMemory((void*)argval);
+   // #define CLEANUP if(LocalIndex != localindexsave) ClearVars(LocalIndex);gosubindex--; FreeMemory((void*)argval);
+    #define CLEANUP(a) cleanerror(a,localindexsave,(void*)argval,argv1[i]);
+
+
+    CallersLinePtr = CurrentLinePtr;
+    SubLinePtr = subfun[index];                                     // used for error reporting
+    p =  SubLinePtr + 1;                                            // point to the sub or function definition
+    skipspace(p);
+    ttp = p;
+
+    // copy the sub/fun name from the definition into temp storage and terminate
+    // p is left pointing to the end of the name (ie, start of the argument list in the definition)
+    CurrentLinePtr = SubLinePtr;                                    // report errors at the definition
+    tp = fun_name;
+    *tp++ = *p++; while(isnamechar(*p)) *tp++ = *p++;
+    if(*p == '$' || *p == '%' || *p == '!') {
+        if(!isfun) {
+        	error("Type specification is invalid: @", (int)(*p));
+        }
+        *tp++ = *p++;
+    }
+    *tp = 0;
+
+    if(isfun && *p != '(' && (*SubLinePtr != cmdCFUN)) error("Function definition");
+
+    // find the end of the caller's identifier, tp is left pointing to the start of the caller's argument list
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    tp = cmd + 1;
+    while(isnamechar(*tp)) tp++;
+    if(*tp == '$' || *tp == '%' || *tp == '!') {
+        if(!isfun) error("Type specification");
+        tp++;
+    }
+    if(toupper(*(p-1)) != toupper(*(tp-1)))error("Inconsistent type suffix");
+
+    // if this is a function we check to find if the function's type has been specified with AS <type> and save it
+    CurrentLinePtr = SubLinePtr;                                    // report errors at the definition
+    FunType = T_NOTYPE;
+    if(isfun) {
+        ttp = skipvar(ttp, false);                                  // point to after the function name and bracketed arguments
+        skipspace(ttp);
+        if(*ttp == tokenAS) {                                       // are we using Microsoft syntax (eg, AS INTEGER)?
+            ttp++;                                                  // step over the AS token
+            ttp = CheckIfTypeSpecified(ttp, &FunType, true);        // get the type
+            if(!(FunType & T_IMPLIED)) error("Variable type");
+        }
+        FunType |= (V_FIND | V_DIM_VAR | V_LOCAL | V_EMPTY_OK);
+    }
+
+
+    // from now on
+    // tp  = the caller's argument list
+    // p   = the argument list for the definition
+    skipspace(tp); skipspace(p);
+
+    // if this is a CFUNCTION we can skip all the rest and just execute the CFUNCTION and return its value
+           if(*SubLinePtr == cmdCFUN) {
+               skipspace(p);
+               if(*p != '(')
+                   *typ = T_INT;
+               else {                                                      // find the type
+                   char *pp = p;
+                   while(*pp != ')' && *pp != 0) pp++;
+                   if(*pp == 0) SyntaxError();
+                   pp++; skipspace(pp);
+                   CheckIfTypeSpecified(pp, typ, false);
+                   *typ &= ~T_IMPLIED;
+               }
+               switch(*typ) {                                              // return the correct type of value
+                   union {
+                       float ftmp;
+                       int itmp;
+                   } u;
+                   case T_INT:  *i64a = CallCFunction(SubLinePtr, tp, p, CallersLinePtr); break;
+                   case T_NBR:  u.itmp = (int)CallCFunction(SubLinePtr, tp, p, CallersLinePtr);
+                                *fa = u.ftmp;
+                               // #if !defined(MX170)
+                               //   RoundDoubleFloat(fa);
+                               // #endif
+                                break;
+                   case T_STR:  *sa = (char *)((unsigned int)CallCFunction(SubLinePtr, tp, p, CallersLinePtr)); break;
+               }
+               TempMemoryIsChanged = true;                                 // signal that temporary memory should be checked
+               return;
+           }
+
+
+    // similar if this is a CSUB
+    if(*SubLinePtr == cmdCSUB) {
+        CallCFunction(SubLinePtr, tp, p, CallersLinePtr);           // run the CSUB
+        TempMemoryIsChanged = true;                                 // signal that temporary memory should be checked
+        return;
+    }
+
+    // from now on we have a user defined sub or function (not a C routine)
+
+    if(gosubindex >= MAXGOSUB) error("Too many nested SUB/FUN");
+
+
+    /******************************************************************************
+    *  ANY ERRORs FROM HERE ON SHOULD  ClearVars(),restore the goosubindex and release memory for argval
+    *  i.e. use the CLEANUP sequence before calling the error.
+     ******************************************************************************/
+    errorstack[gosubindex] = CallersLinePtr;
+	gosubstack[gosubindex++] = isfun ? NULL : nextstmt;             // NULL signifies that this is returned to by ending ExecuteProgram()
+
+	#define buffneeded MAX_ARG_COUNT*(sizeof(union u_argval)+ 2*sizeof(int)+3*sizeof(char *)+sizeof(char))+ 2*STRINGSIZE
+    // allocate memory for processing the arguments
+    // argval=GetMemory(buffneeded);
+    argval=GetSystemMemory(buffneeded);
+    argtype=(void *)argval+MAX_ARG_COUNT * sizeof(union u_argval);
+    argVarIndex = (void *)argtype+MAX_ARG_COUNT * sizeof(int);
+    argbuf1 = (void *)argVarIndex+MAX_ARG_COUNT * sizeof(int);
+    argv1 = (void *)argbuf1+STRINGSIZE;
+    argbuf2 = (void *)argv1+MAX_ARG_COUNT * sizeof(char *);
+    argv2 = (void *)argbuf2+STRINGSIZE;
+    argbyref=(void *)argv2+MAX_ARG_COUNT * sizeof(char *);
+
+    // now split up the arguments in the caller
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    argc1 = 0;
+    if(*tp) makeargs(&tp, MAX_ARG_COUNT, argbuf1, argv1, &argc1, (*tp == '(') ? "(," : ",");
+
+    // split up the arguments in the definition
+    CurrentLinePtr = SubLinePtr;                                    // any errors must be at the definition
+    argc2 = 0;
+    if(*p) makeargs(&p, MAX_ARG_COUNT, argbuf2, argv2, &argc2, (*p == '(') ? "(," : ",");
+
+    // error checking
+    if(argc2 && (argc2 & 1) == 0){CLEANUP(1)}// error("Argument list");}
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+    if(argc1 > argc2 || (argc1 && (argc1 & 1) == 0)) {CLEANUP(1)}// error("Argument list");}
+
+	// step through the arguments supplied by the caller and get the value supplied
+    // these can be:
+    //    - missing (ie, caller did not supply that parameter)
+    //    - a variable, in which case we need to get a pointer to that variable's data and save its index so later we can get its type
+    //    - an expression, in which case we evaluate the expression and get its value and type
+    for(i = 0; i < argc2; i += 2) { // count through the arguments in the definition of the sub/fun
+    	if(i < argc1 && *argv1[i]) {
+
+             // check if the argument is a valid variable
+   			 if(i < argc1 && isnamestart(*argv1[i]) && *skipvar(argv1[i], false) == 0){
+                 // yes, it is a variable (or perhaps a user defined function which looks the same)?
+                 if(!(FindSubFun(argv1[i], 1) >= 0 && strchr(argv1[i], '(') != NULL)) {
+                     // yes, this is a valid variable.  set argvalue to point to the variable's data and argtype to its type
+                	 argval[i].s = findvar(argv1[i], V_FIND | V_EMPTY_OK);        // get a pointer to the variable's data
+                     argtype[i] = vartbl[VarIndex].type;                          // and the variable's type
+                     argVarIndex[i] = VarIndex;
+                     if(argtype[i] & T_CONST) {
+                         argtype[i] = 0;                                          // we don't want to point to a constant
+                     } else {
+                    	 argtype[i] |= T_PTR;                                     // flag this as a pointer
+                     }
+                 }
+             }
+
+            // check for BYVAL or BYREF in sub/fun definition
+             argbyref[i]=0;
+             skipspace(argv2[i]);
+             if(toupper(*argv2[i]) == 'B' && toupper(*(argv2[i]+1)) == 'Y') {
+              	if((checkstring(argv2[i] + 2, "VAL")) != NULL) {      // if BYVAL
+              	    //Only if not an array remove any pointer flag in the caller
+              	    if(vartbl[argVarIndex[i]].dims[0] == 0 ){ argtype[i] = 0;}
+
+                    // Trap an array but remove pointer if an array element
+                	if(vartbl[argVarIndex[i]].dims[0] > 0){
+              	    	/*
+              	    	 * Set tp to point to the current parameter
+              	    	 * See if we have an array or an array element
+              	    	 */
+
+                		tp=argv1[i];
+                  	    do { tp++;} while(*tp != '(');  // We will always find a '(' because it must be an array or an array element to get here
+                  	    tp++;
+                  	    skipspace(tp);
+                  	    if(*tp == ')') {
+                  	    	 {CLEANUP(3) }//error("Array as BYVAL not allowed $",argv1[i]);}
+                  	    }else{
+                  	        argtype[i] = 0;
+                  	    }
+                	}
+              	    argv2[i] += 5;										// skip to the variable start
+
+              	} else {
+                	if((checkstring(argv2[i] + 2, "REF")) != NULL) {    // if BYREF
+                	  if((argtype[i] & T_PTR) == 0){CLEANUP(4) }//error("Variable required for BYREF $", argv1[i]);}
+                	  // Trap an array element trying for BYREF
+                  	  if(vartbl[argVarIndex[i]].dims[0] > 0){
+
+                  		tp=argv1[i];
+                  	    do {tp++;} while(*tp != '(');
+                  	    tp++;
+                  	    skipspace(tp);
+                  	    if(!(*tp == ')') ){
+                  	    	{CLEANUP(5)}// error("Array Element as BYREF not allowed $",argv1[i]);}
+                  	    }
+                  	  }
+            	      argv2[i] += 5;									// skip to the variable start
+            	      argbyref[i]=1;
+               	    }
+            	}
+   			}
+
+             // if argument is present and is not a pointer to a variable then evaluate it as an expression
+            if(argtype[i] == 0) {
+                long long int ia;
+                evaluate(argv1[i], &argval[i].f, &ia, &s, &argtype[i], false);   // get the value and type of the argument
+                if(argtype[i] & T_INT)
+                    argval[i].i = ia;
+                else if(argtype[i] & T_STR) {
+                    argval[i].s = GetMemory(STRINGSIZE);
+                    Mstrcpy(argval[i].s, s);
+                }
+            }
+
+        }
+    }
+
+
+
+    // now we step through the parameters in the definition of the sub/fun
+    // for each one we create the local variable and compare its type to that supplied in the callers list
+
+    CurrentLinePtr = SubLinePtr;                                    // any errors must be at the definition
+    LocalIndex++;
+    for(i = 0; i < argc2; i += 2) {                                 // count through the arguments in the definition of the sub/fun
+        ArgType = T_NOTYPE;
+        //skip BYVAL/BYREF keywords
+
+        if(toupper(*argv2[i]) == 'B' && toupper(*(argv2[i]+1)) == 'Y') {
+        	if((checkstring(argv2[i] + 2, "VAL")) != NULL) {
+        		argv2[i] += 5;
+           	}else if((checkstring(argv2[i] + 2, "REF")) != NULL) {    // if BYREF
+        		argv2[i] += 5;									// skip to the variable start
+           	}
+        }
+
+        tp = skipvar(argv2[i], false);                              // point to after the variable
+        skipspace(tp);
+        if(*tp == tokenAS) {                                        // are we using Microsoft syntax (eg, AS INTEGER)?
+            *tp++ = 0;                                              // terminate the string and step over the AS token
+            tp = CheckIfTypeSpecified(tp, &ArgType, true);          // and get the type
+            if(!(ArgType & T_IMPLIED)){CLEANUP(6) }//error("Variable type");}
+
+        }
+
+        ArgType |= (V_FIND | V_DIM_VAR | V_LOCAL | V_EMPTY_OK);
+        tp = findvar(argv2[i], ArgType);                            // declare the local variable
+        if(vartbl[VarIndex].dims[0] > 0){CLEANUP(1)}// error("Argument list"); }   // if it is an array it must be an empty array
+        CurrentLinePtr = CallersLinePtr;                            // report errors at the caller
+
+        // if the definition called for an array, special processing and checking will be required
+       	if(vartbl[VarIndex].dims[0] == -1) {
+        	int j;
+            if(vartbl[argVarIndex[i]].dims[0] == 0)  {CLEANUP(8)}// error("Expected an array");}
+
+            if(TypeMask(vartbl[VarIndex].type) != TypeMask(argtype[i])){CLEANUP(9) }//error("Incompatible type: $", argv1[i]);}
+            vartbl[VarIndex].val.s = NULL;
+            for(j = 0; j < MAXDIM; j++)                             // copy the dimensions of the supplied variable into our local variable
+                vartbl[VarIndex].dims[j] = vartbl[argVarIndex[i]].dims[j];
+
+        }
+
+
+        // if this is a pointer check if the type is NOT the same as that requested in the sub/fun definition
+        if((argtype[i] & T_PTR) && TypeMask(vartbl[VarIndex].type) != TypeMask(argtype[i])) {
+        	if(argbyref[i]) {CLEANUP(10) }//error("BYREF requires same types: $", argv1[i]);}          //BYREF requires same types.
+        	if((TypeMask(vartbl[VarIndex].type) & T_STR) || (TypeMask(argtype[i]) & T_STR))
+        	   {CLEANUP(9) }//error("Incompatible type: $", argv1[i]);}
+            // make this into an ordinary argument
+            if(vartbl[argVarIndex[i]].type & T_PTR) {
+                argval[i].i = *vartbl[argVarIndex[i]].val.ia;       // get the value if the supplied argument is a pointer
+            } else {
+                argval[i].i = *(long long int *)argval[i].s;        // get the value if the supplied argument is an ordinary variable
+            }
+            argtype[i] &= ~T_PTR;                                   // and remove the pointer flag
+        }
+
+
+        // if this is a pointer (note: at this point the caller type and the required type must be the same)
+        if(argtype[i] & T_PTR) {
+            // the argument supplied was a variable so we must setup the local variable as a pointer
+            if((vartbl[VarIndex].type & T_STR) && vartbl[VarIndex].val.s != NULL) {
+                FreeMemorySafe((void *)&vartbl[VarIndex].val.s);     // free up the local variable's memory if it is a pointer to a string
+            }
+            vartbl[VarIndex].val.s = argval[i].s;                              // point to the data of the variable supplied as an argument
+            vartbl[VarIndex].type |= T_PTR;                                    // set the type to a pointer
+            vartbl[VarIndex].size = vartbl[argVarIndex[i]].size;               // just in case it is a string copy the size
+        // this is not a pointer
+        } else if(argtype[i] != 0) {                                           // in getting the memory argtype[] is initialised to zero
+            // the parameter was an expression or a just straight variables with different types (therefore not a pointer))
+            if((vartbl[VarIndex].type & T_STR) && (argtype[i] & T_STR)) {      // both are a string
+                Mstrcpy(vartbl[VarIndex].val.s, argval[i].s);
+                FreeMemorySafe((void *)&argval[i].s);
+            } else if((vartbl[VarIndex].type & T_NBR) && (argtype[i] & T_NBR)) // both are a float
+                vartbl[VarIndex].val.f = argval[i].f;
+            else if((vartbl[VarIndex].type & T_NBR) && (argtype[i] & T_INT))   // need a float but supplied an integer
+                vartbl[VarIndex].val.f = argval[i].i;
+            else if((vartbl[VarIndex].type & T_INT) && (argtype[i] & T_INT))   // both are integers
+                vartbl[VarIndex].val.i = argval[i].i;
+            else if((vartbl[VarIndex].type & T_INT) && (argtype[i] & T_NBR))   // need an integer but was supplied with a MMFLOAT
+                vartbl[VarIndex].val.i = FloatToInt64(argval[i].f);
+            else
+                {CLEANUP(9)}// error("Incompatible type: $", argv1[i]);}
+        }
+
+    }
+
+
+    // temp memory used in setting up the arguments can be deleted now
+    FreeMemory((void*)argval);
+    strcpy(CurrentSubFunName, fun_name);
+    // if it is a defined command we simply point to the first statement in our command and allow ExecuteProgram() to carry on as before
+    // exit from the sub is via cmd_return which will decrement LocalIndex
+    if(!isfun) {
+        skipelement(p);
+        nextstmt = p;                                               // point to the body of the subroutine
+        return;
+    }
+
+    // if it is a defined function we have a lot more work to do.  We must:
+    //   - Create a local variable for the function's name
+    //   - Save the globals being used by the current command that caused the function to be called
+    //   - Invoke another instance of ExecuteProgram() to execute the body of the function
+    //   - When that returns we need to restore the global variables
+    //   - Get the variable's value and save that in the return value globals (fret or sret)
+    //   - Return to the expression parser
+    tp = findvar(fun_name, FunType | V_FUNCT);                      // declare the local variable
+    FunType = vartbl[VarIndex].type;
+    if(FunType & T_STR) {
+        FreeMemorySafe((void *)&vartbl[VarIndex].val.s);                         // free the memory if it is a string
+        vartbl[VarIndex].type |= T_PTR;
+        LocalIndex--;                                               // allocate the memory at the previous level
+        vartbl[VarIndex].val.s = tp = GetTempMemory(STRINGSIZE);    // and use our own memory
+        LocalIndex++;
+    }
+    skipelement(p);                                                 // point to the body of the function
+
+    ttp = nextstmt;                                                 // save the globals used by commands
+    tcmdtoken = cmdtoken;
+    s = cmdline;
+
+    ExecuteProgram(p);                                              // execute the function's code
+    CurrentLinePtr = CallersLinePtr;                                // report errors at the caller
+
+    cmdline = s;                                                    // restore the globals
+    cmdtoken = tcmdtoken;
+    nextstmt = ttp;
+
+    // return the value of the function's variable to the caller
+    if(FunType & T_NBR)
+        *fa = *(MMFLOAT *)tp;
+    else if(FunType & T_INT)
+        *i64a = *(long long int *)tp;
+    else
+        *sa = tp;                                                   // for a string we just need to return the local memory
+    *typ = FunType;                                                 // save the function type for the caller
+	ClearVars(LocalIndex--);                                        // delete any local variables
+    TempMemoryIsChanged = true;                                     // signal that temporary memory should be checked
+	gosubindex--;
+
+}
+#endif
+
+
 
 char MIPS16 *strcasechr(const char *p, int ch)
 {
@@ -1073,9 +2266,9 @@ void MIPS16 tokenise(int console) {
     firstnonwhite = true;
     labelvalid = true;
     while(*p) {
-	    if(*p=='*' && p[1]=='/'){
-            multi=false;
-        }
+	   // if(*p=='*' && p[1]=='/'){
+       //     multi=false;
+       // }
         // just copy a space
         if(*p == ' ') {
             *op++ = *p++;
@@ -1202,10 +2395,10 @@ void MIPS16 tokenise(int console) {
                 }
                 firstnonwhite = false;
                 labelvalid = false;                                 // we do not want any labels after this
-                if(match_i + C_BASETOKEN == GetCommandValue((char *)"/*")){
-                    multi= true;
-                }
-                if(match_i + C_BASETOKEN == GetCommandValue((char *)"*/"))multi= false;
+               // if(match_i + C_BASETOKEN == GetCommandValue((char *)"/*")){
+               //     multi= true;
+               // }
+               // if(match_i + C_BASETOKEN == GetCommandValue((char *)"*/"))multi= false;
 
                 continue;
             }
@@ -1339,9 +2532,9 @@ char *evaluate(char *p, MMFLOAT *fa, long long int *ia, char **sa, int *ta, int 
     while(o != E_END) p = doexpr(p, fa, ia, &s, &o, &t);            // get the right hand side of the expression and evaluate the operator in o
 
     // check that the types match and convert them if we can
-    if((*ta & (T_NBR |T_INT)) && t & T_STR) error("Expected a number");
+    if((*ta & (T_NBR |T_INT)) && t & T_STR) StandardError(10);//error("Expected a number");
     if(*ta & T_STR && (t & (T_NBR | T_INT))) error("Expected a string");
-    if(o != E_END) error("Argument count");
+    if(o != E_END) StandardError(2);//error("Argument count");
     if((*ta & T_NBR) && (t & T_INT)) *fa = *ia;
     if((*ta & T_INT) && (t & T_NBR)) *ia = FloatToInt64(*fa);
     *ta = t;
@@ -1409,7 +2602,7 @@ long long int getint(char *p, long long int min, long long int max) {
     evaluate(p, &f, &i64, &s, &t, false);
     if(t & T_NBR) i= FloatToInt64(f);
     else i=i64;
-    if(i < min || i > max) error("% is invalid (valid is % to %)", (int)i, (int)min, (int)max);
+    if(i < min || i > max) StandardErrorParam3(19, (int)i, (int)min, (int)max);
     return i;
 }
 */
@@ -1533,7 +2726,7 @@ char __attribute__ ((optimize("-O3"))) *getvalue(char *p, MMFLOAT *fa, long long
 			else if(t & T_INT)
 				i64 = ((i64 != 0)?0:1);
 		   else
-				error("Expected a number");
+				StandardError(10);//error("Expected a number");
 			skipspace(p);
 			*fa = f;                                                    // save what we have
 			*ia = i64;
@@ -1549,7 +2742,7 @@ char __attribute__ ((optimize("-O3"))) *getvalue(char *p, MMFLOAT *fa, long long
 			if(t & T_NBR)
 				i64 = FloatToInt64(f);
 			else if(!(t & T_INT))
-				error("Expected a number");
+				StandardError(10);//error("Expected a number");
 			i64 = ~i64;
 			t = T_INT;
 			skipspace(p);
@@ -1572,7 +2765,7 @@ char __attribute__ ((optimize("-O3"))) *getvalue(char *p, MMFLOAT *fa, long long
 			else if(t & T_INT)
 				i64 = -i64;                                             // negate the integer returned
 		   else
-				error("Expected a number");
+				StandardError(10);//error("Expected a number");
 			skipspace(p);
 			*fa = f;                                                    // save what we have
 			*ia = i64;
@@ -1724,7 +2917,7 @@ char __attribute__ ((optimize("-O3"))) *getvalue(char *p, MMFLOAT *fa, long long
                             i+=(*p++)-48;
                             i*=10;
                             i+=(*p++)-48;
-                            if(i==0)error("Null character \\000 in escape sequence - use CHR$(0)","$");
+                            if(i==0)StandardErrorParamS(16,"$");
                             *p1++=i;
                         } else {
                             p++;
@@ -1777,7 +2970,7 @@ char __attribute__ ((optimize("-O3"))) *getvalue(char *p, MMFLOAT *fa, long long
                                         p++;
                                         i = (i << 4) | ((toupper(*p) >= 'A') ? toupper(*p) - 'A' + 10 : *p - '0');
                                         p++;
-                                        if(i==0)error("Null character \\&00 in escape sequence - use CHR$(0)","$");
+                                        if(i==0)StandardErrorParamS(16,"$");
                                         *p1++=i;
                                     } else *p1++='x';
                                     break;
@@ -1793,7 +2986,7 @@ char __attribute__ ((optimize("-O3"))) *getvalue(char *p, MMFLOAT *fa, long long
 			t = T_STR;
     }
     else
-        error("Syntax");
+        SyntaxError();
     }
     skipspace(p);
     *fa = f;                                                        // save what we have
@@ -2019,7 +3212,8 @@ routines for storing and manipulating variables
 // storage of the variable's data:
 //      if it is type T_NBR or T_INT the value is held in the variable slot
 //      for T_STR a block of memory of MAXSTRLEN size (or size determined by the LENGTH keyword) will be malloc'ed and the pointer stored in the variable slot.
-/*void *findvar(char *p, int action) {
+/*
+void *findvar(char *p, int action) {
     char name[MAXVARLEN + 1];
     int i, j, size, ifree, nbr, vtype, vindex, namelen, tmp;
     char *s, *x;
@@ -2341,7 +3535,8 @@ routines for storing and manipulating variables
     vartbl[ifree].size = size;
     vartbl[ifree].val.s = mptr;
     return mptr;
-}*/
+}
+*/
 
 void *findvar(char *p, int action) {
     char name[MAXVARLEN + 1];
@@ -2755,7 +3950,11 @@ void *findvar(char *p, int action) {
         else mptr = GetMemory(tmp);
     }  else {
     	tmp=(nbr * (size + 1));
-    	if(tmp<=(MAXDIM-1)*sizeof(short) && j==0)mptr = (void *)&vartbl[ifree].dims[1];
+    	//if(tmp<=(MAXDIM-1)*sizeof(short) && j==0)mptr = (void *)&vartbl[ifree].dims[1];
+    	//else if(tmp<=256)mptr = GetMemory(STRINGSIZE);
+       // else mptr = GetMemory(tmp);
+    	// Change from Picomites for short CONST string 6.00.02RC5
+    	if(tmp<=(MAXDIM-1)*sizeof(vartbl[ifree].dims[1]) && j==0)mptr = (void *)&vartbl[ifree].dims[1];
     	else if(tmp<=256)mptr = GetMemory(STRINGSIZE);
         else mptr = GetMemory(tmp);
     }
@@ -2818,7 +4017,7 @@ void makeargs(char **p, int maxargs, char *argbuf, char *argv[], int *argc, char
     //  - flag that a closing bracket should be found
     if(*delim == '(') {
         if(*tp != '(')
-            error("Syntax");
+            SyntaxError();
         expect_bracket = true;
         delim++;
         tp++;
@@ -2847,7 +4046,7 @@ void makeargs(char **p, int maxargs, char *argbuf, char *argv[], int *argc, char
             }
 
             inarg = false;
-            if(*argc >= maxargs) error("Syntax");
+            if(*argc >= maxargs) SyntaxError();
             argv[(*argc)++] = op;                                   // save the pointer for this delimiter
             *op++ = *tp++;                                          // copy the token or char (always one)
             *op++ = 0;                                              // terminate it
@@ -2866,7 +4065,7 @@ void makeargs(char **p, int maxargs, char *argbuf, char *argv[], int *argc, char
 
         // not a special char so we must start a new argument
         if(!inarg) {
-            if(*argc >= maxargs) error("Syntax");
+            if(*argc >= maxargs) SyntaxError();
             argv[(*argc)++] = op;                                   // save the pointer for this arg
             inarg = true;
         }
@@ -2887,7 +4086,7 @@ void makeargs(char **p, int maxargs, char *argbuf, char *argv[], int *argc, char
         if(*tp == '"') {
             do {
                 *op++ = *tp++;
-                if(*tp == 0) error("Syntax");
+                if(*tp == 0) SyntaxError();
             } while(*tp != '"');
             *op++ = *tp++;
             continue;
@@ -2898,7 +4097,7 @@ void makeargs(char **p, int maxargs, char *argbuf, char *argv[], int *argc, char
 
         expect_cmd = false;
     }
-    if(expect_bracket && *tp != ')') error("Syntax");
+    if(expect_bracket && *tp != ')') SyntaxError();
     while(op - 1 > argbuf && *(op-1) == ' ') --op;                  // trim any trailing spaces on the last argument
     *op = 0;                                                        // terminate the last argument
 }
@@ -2958,8 +4157,30 @@ void MIPS16 error(char *msg, ...) {
     // copy the error message into the global MMErrMsg truncating at any tokens or if the string is too long
     for(p = MMErrMsg, tp = tstr; *tp < 127 && (tp - tstr) < MAXERRMSG - 1; ) *p++ = *tp++;
     *p = 0;
-    
-    if(OptionErrorSkip) longjmp(ErrNext, 1);                        // if OPTION ERROR SKIP/IGNORE is in force
+
+    // Clean up after and error in DefindedSubFun
+   if(DefinedSubFunMem){
+     	if(LocalIndex != DefinedSubFunLocalIndex) ClearVars(LocalIndex);
+    	gosubindex--;
+    	FreeMemory((void*)DefinedSubFunMem);
+    	DefinedSubFunMem=0;
+   }
+
+    //if(OptionErrorSkip) longjmp(ErrNext, 1);                       // if OPTION ERROR SKIP/IGNORE is in force
+    if (OptionErrorSkip && OptionErrorSkip <= 100000)
+        longjmp(ErrNext, 1); // if OPTION ERROR SKIP/IGNORE is in force
+    if (OptionErrorSkip > 100000)
+    {
+        //_excep_code = RESET_COMMAND;
+        _excep_code =RESTART_ERROR;
+        if (!CurrentLinePtr)
+            _excep_addr =0;
+        else if(CurrentLinePtr < ProgMemory + Option.ProgFlashSize)
+         	_excep_addr = CountLines(CurrentLinePtr);
+        else
+           _excep_addr = 65000;
+        SoftReset();
+    }
 
     LoadOptions();                                                  // make sure that the option struct is in a clean state
 
@@ -3017,7 +4238,152 @@ void MIPS16 error(char *msg, ...) {
    //longjmp(mark, 1);
 }
 
+void SyntaxError(void)
+{
+	error("Invalid syntax");
+}
+//.data 4 bytes for each address pointer into CCRAM if -->         const char *errorstring[]
+//.data 4 bytes for each address pointer into FLASH if -->  static const char *errorstring[]
+//.rodata actual string 1 byte per char plus ending NULL (step 8 bytes) FLASH
+// const char *errorstring[] = {
+static const char *errorstring[] = {
+    "",                                                            // 0
+    "spare",                                                       // 1
+    "Argument count",                                              // 2
+	"Invalid variable",                                            // 3
+	"Display not configured",                                      // 4
+	"Display already configured",                                  // 5
+	"Cannot change a constant",                                    // 6
+	"Unknown command",                                             // 7
+    "File number",                                                 // 8
+    "File number is not open",                                     // 9
+	"Expected a number",                                           // 10
+	"Number out of bounds",                                        // 11
+	"String length",                                               // 12
+	"Array size mismatch",                                         // 13
+	"Already open",                                                // 14
+	"Argument 1 must be integer array",                            // 15
+	"Illegal escape sequence, use CHR$(0) for the Null character", // 16
+	"No DATA to read",                                             // 17
+	"String too long",                                             // 18
+	"% is invalid (valid is % to %)",                              // 19
+	"Pin | is in use",                                             // 20
+	"Invalid configuration",                                       // 21
+	"Invalid pin",                                                 // 22
+	"Invalid in a program",                                        // 23
+	"Not enough memory",                                           // 24
+	"Argument % must be a 5 element floating point array",         // 25
+	"Invalid variable for $",                                      // 26
+	"HAL_ADC_Start",                                               // 27
+	"HAL_ADC_PollForConversion",                                   // 28
+	"HAL_ADC_ConfigChannel",                                       // 29
+	"HAL_ADC_DeInit",                                              // 30
+	"HAL_ADC_Init"                                                 // 31
+	"HAL_TIM_PWM_Init",                                            // 32
+	"HAL_TIM_PWM_Start",                                           // 33
+	"HAL_TIM_PWM_ConfigChannel",                                   // 34
+	"HAL_TIM_ConfigClockSource",                                   // 35
+	"HAL_TIM_Base_Init",                                           // 36
+	"HAL_TIMEx_MasterConfigSynchronization",                       // 37
+	"HAL_TIM_Base_Start_IT",                                       // 38
+};
+void StandardError(int n)
+{
+    error((char *)errorstring[n]);
+}
 
+void StandardErrorParam(int n, int m)
+{
+    error((char *)errorstring[n], m);
+}
+void StandardErrorParamS(int n, char *m)
+{
+    error((char *)errorstring[n], m);
+}
+void StandardErrorParam2(int n, int m, int l)
+{
+    error((char *)errorstring[n], m, l);
+}
+
+void StandardErrorParam3(int n, int m, int l, int h)
+{
+    error((char *)errorstring[n], m, l, h);
+}
+
+/*
+const char *errorstring[] = {
+    "",                                                            // 0
+    "Not available on this display",                               // 1
+    "X Argument count",                                              // 2
+    "PIO 0 not available",                                         // 3
+    "PIO 1 not available",                                         // 4
+    "PIO 2 not available",                                         // 5
+    "X Invalid variable",                                            // 6
+    "Object % does not exist",                                     // 7
+    "Invalid configuration",                                       // 8
+    "X Invalid pin",                                                 // 9
+    "X Invalid in a program",                                        // 10
+    "Invalid on this display",                                     // 11
+    "Pin not set for PWM",                                         // 12
+    "No memory allocated for GUI controls",                        // 13
+    "X String length",                                               // 14
+    "Overflow",                                                    // 15
+    "X Array size mismatch",                                         // 16
+    "Array size",                                                  // 17
+    "X File number",                                                 // 18
+    "X File number is not open",                                     // 19
+    "X Expected a number",                                           // 20
+    "X Number out of bounds",                                        // 21
+    "X Cannot change a constant",                                    // 22
+    "Destination array too small",                                 // 23
+    "Already Set to pin %",                                        // 24
+    "Library is using Slot % ",                                    // 25
+    "X % is invalid (valid is % to %)",                              // 26
+    "Pin %/| is in use",                                           // 27
+    "Insufficient data",                                           // 28
+    "X Not enough memory",                                           // 29
+    "RTC not responding",                                          // 30
+    "X Already open",                                                // 31
+    "Insufficient space in array",                                 // 32
+    "Maximum % characters",                                        // 33
+    "Coordinates",                                                 // 34
+    "X Argument 1 must be integer array",                            // 35
+    "X Unknown command",                                             // 36
+    "Invalid buffer",                                              // 37
+    "Frame buffer not created",                                    // 38
+    "Variable > 255",                                              // 39
+    "Invalid for this screen mode",                                // 40
+    "Argument % must be a 5 element floating point array",         // 41
+    "Pin $ is not off or an ADC input",                            // 42
+    "Pin %/| is not off or an output",                             // 43
+    "SYSTEM I2C not configured",                                   // 44
+    "System SPI not configured",                                   // 45
+    "X Illegal escape sequence, use CHR$(0) for the Null character", // 46
+     12345678901234567890123456789012345678901234567890123456789 (59)
+    "Struct member arrays not supported for this command",         // 47
+};
+void StandardError(int n)
+{
+    error((char *)errorstring[n]);
+}
+void StandardErrorParam(int n, int m)
+{
+    error((char *)errorstring[n], m);
+}
+void StandardErrorParam2(int n, int m, int l)
+{
+    error((char *)errorstring[n], m, l);
+}
+void StandardErrorParamS(int n, char *m)
+{
+    error((char *)errorstring[n], m);
+}
+
+void StandardErrorParam3(int n, int m, int l, int h)
+{
+    error((char *)errorstring[n], m, l, h);
+}
+*/
 
 /**********************************************************************************************
  Routines to convert floats and integers to formatted strings
@@ -3349,6 +4715,7 @@ void MIPS16 ClearRuntime(void) {
     InitHeap();
     m_alloc(0);
     ClearVars(0);
+    //memset(cmdlinebuff,0,sizeof(cmdlinebuff));
     memset(datastore, 0, sizeof(struct sa_data) * MAXRESTORE);
     restorepointer = 0;
     varcnt = 0;
@@ -3650,7 +5017,7 @@ char *CtoM(char *p) {
     int len, i;
     char *p1, *p2;
     len = i = strlen(p);
-    if(len > MAXSTRLEN) error("String too long");
+    if(len > MAXSTRLEN) StandardError(18);//String too long;
     p1 = p + len; p2 = p + len - 1;
     while(i--) *p1-- = *p2--;
     *p = len;

@@ -96,7 +96,7 @@ extern TIM_HandleTypeDef htim1;
 void ConfigDisplaySSD(char *p) {
 	int DISPLAY_TYPE=0;
     getargs(&p, 9,",");
-//    if((argc & 1) != 1 || argc < 3) error("Argument count");
+//    if((argc & 1) != 1 || argc < 3) StandardError(2);//error("Argument count");
 	if(checkstring(argv[0], "SSD1963_4_16")) {                         // this is the 4" glass
 		DISPLAY_TYPE = SSD1963_4_16;
     } else if(checkstring(argv[0], "SSD1963_5_16")) {                  // this is the 5" glass
@@ -122,7 +122,7 @@ void ConfigDisplaySSD(char *p) {
     	DISPLAY_TYPE = IPS_4_16;	                      /***G.A***/
     } else
         return;
-    if(!(argc == 3 || argc == 5 || argc==7)) error("Argument count");
+    if(!(argc == 3 || argc == 5 || argc==7)) StandardError(2);//error("Argument count");
     
     if(checkstring(argv[2], "L") || checkstring(argv[2], "LANDSCAPE"))
         Option.DISPLAY_ORIENTATION = LANDSCAPE;
@@ -411,7 +411,7 @@ unsigned int ReadData(void) {
 * also maps the start and end points to suit the orientation
 ********************************************************************/
 void  SetAreaILI9341(int xstart, int ystart, int xend, int yend, int rw) {
-    if(HRes == 0) error("Display not configured");
+    if(HRes == 0) StandardError(4);//error("Display not configured");
     WriteSSD1963Command(ILI9341_COLADDRSET);
     WriteDataSSD1963(xstart >> 8);
     WriteDataSSD1963(xstart);
@@ -429,7 +429,7 @@ void  SetAreaILI9341(int xstart, int ystart, int xend, int yend, int rw) {
     }
 }
 void  SetAreaIPS_4_16(int xstart, int ystart, int xend, int yend, int rw) {
-    if(HRes == 0) error("Display not configured");
+    if(HRes == 0) StandardError(4);//error("Display not configured");
     WriteCmdDataIPS_4_16(0x2A00,1,xstart>>8);
     WriteCmdDataIPS_4_16(0x2A01,1,xstart & 0xFF);
     WriteCmdDataIPS_4_16(0x2A02,1,xend>>8);
@@ -708,7 +708,7 @@ OTM8009A_16Init[] = {   // Initialization commands for OTM8009A_16 screen
 		0xc0,0xB4,1,0x50,
 		0xE1,0x00,16,0x00,0x09,0x0F,0x0E,0x07,0x10,0x0B,0x0A,0x04,0x07,0x0B,0x08,0x0F,0x10,0x0A,0x01,
 		0xE2,0x00,16,0x00,0x09,0x0F,0x0E,0x07,0x10,0x0B,0x0A,0x04,0x07,0x0B,0x08,0x0F,0x10,0x0A,0x01,
-	    0xD9,0x00,1,0x4E,      /* VCOM Voltage Setting */
+	    0xD9,0x00,1,0x4E,      //VCOM Voltage Setting /
 		0xc1,0x81,1,0x66,      //osc=65HZ
 
 		0xc1,0xa1,1,0x08,      //RGB Video Mode Setting
@@ -1608,7 +1608,8 @@ void DisplayPutC(char c) {
         case '\r':  CurrentX = 0;
                     return;
         case '\n':  CurrentY += gui_font_height;
-        if(CurrentY + gui_font_height >= VRes) {
+        if(CurrentY + gui_font_height >= (VRes/gui_font_height)*gui_font_height) {
+        //if(CurrentY + gui_font_height >= VRes) {
             //if(Option.NoScroll && Option.DISPLAY_CONSOLE){ClearScreen(gui_bcolour);CurrentX=0;CurrentY=0;}
             if(Option.NoScroll && Option.DISPLAY_CONSOLE){ClearScreen(gui_bcolour);CurrentX=0;CurrentY=0;}
             else {

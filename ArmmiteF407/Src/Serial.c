@@ -124,19 +124,19 @@ int get_baudrate(int comport, int timeout){
     int pin=0;
     switch(comport){
         case 1:
-            if(com1) error("Already open");
+            if(com1) StandardError(14);//error("Already open");
             pin=COM1_RX_PIN;
             break;
         case 2:
-            if(com2) error("Already open");
+            if(com2) StandardError(14);//error("Already open");
             pin=COM2_RX_PIN;
             break;
        case 3:
-          if(com3) error("Already open");
+          if(com3) StandardError(14);//error("Already open");
            pin=COM3_RX_PIN;
            break;
         case 4:
-           if(com4) error("Already open");
+           if(com4) StandardError(14);//error("Already open");
             pin=COM4_RX_PIN;
           break;
     }
@@ -215,11 +215,11 @@ void SerialOpen(char *spec) {
     for(i = 0; i < 6; i++) {
     	if(str_equal(argv[argc - 1], "OC")) { oc = true; argc -= 2; }	// get the open collector option
     	if(str_equal(argv[argc - 1], "EVEN")) {
-    		if(parity)error("Syntax");
+    		if(parity)SyntaxError();
     		else {parity = 1; argc -= 2; }	// set even parity
     	}
     	if(str_equal(argv[argc - 1], "ODD")) {
-    		if(parity)error("Syntax");
+    		if(parity)SyntaxError();
     		else {parity = 2; argc -= 2; }	// set even parity
     	}
     	if(str_equal(argv[argc - 1], "S2")) { s2 = true; argc -= 2; }	// get the two stop bit option
@@ -261,7 +261,7 @@ void SerialOpen(char *spec) {
 	if(spec[3] == '1') {
 	///////////////////////////////// this is COM1 ////////////////////////////////////
 
-		if(com1) error("Already open");
+		if(com1) StandardError(14);//error("Already open");
         CheckPin(COM1_RX_PIN, CP_CHECKALL);
         CheckPin(COM1_TX_PIN, CP_CHECKALL);
 
@@ -311,7 +311,7 @@ void SerialOpen(char *spec) {
     if (spec[3] == '2') {
 	///////////////////////////////// this is COM2 ////////////////////////////////////
 
-		if(com2) error("Already open");
+		if(com2) StandardError(14);//error("Already open");
         CheckPin(COM2_RX_PIN, CP_CHECKALL);
         CheckPin(COM2_TX_PIN, CP_CHECKALL);
 
@@ -362,7 +362,7 @@ void SerialOpen(char *spec) {
     if (spec[3] == '3') {
 	///////////////////////////////// this is COM3 ////////////////////////////////////
 
-		if(com3) error("Already open");
+		if(com3) StandardError(14);//error("Already open");
         CheckPin(COM3_RX_PIN, CP_CHECKALL);
         CheckPin(COM3_TX_PIN, CP_CHECKALL);
 
@@ -414,7 +414,7 @@ void SerialOpen(char *spec) {
     if (spec[3] == '4') {
 	///////////////////////////////// this is COM4 ////////////////////////////////////
 
-		if(com4) error("Already open");
+		if(com4) StandardError(14);//error("Already open");
         CheckPin(COM4_RX_PIN, CP_CHECKALL);
         CheckPin(COM4_TX_PIN, CP_CHECKALL);
 

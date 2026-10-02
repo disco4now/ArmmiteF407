@@ -280,15 +280,15 @@ void cmd_var(void) {
 
      if((p = checkstring(cmdline, "SAVE"))) {
         getargs(&p, (MAX_ARG_COUNT * 2) - 1, ",");                  // getargs macro must be the first executable stmt in a block
-        if(argc == 0) error("Invalid syntax");
-        if(argc && (argc & 0x01) == 0) error("Invalid syntax");
+        if(argc == 0) SyntaxError();//error("Invalid syntax");
+        if(argc && (argc & 0x01) == 0) SyntaxError();//error("Invalid syntax");
 
         // before we start, run through the arguments checking for errors
         for(i = 0; i < argc; i += 2) {
             checkend(skipvar(argv[i], false));
             VarDataList[i/2] = findvar(argv[i], V_NOFIND_ERR | V_EMPTY_OK);
             VarList[i/2] = VarIndex;
-            if((vartbl[VarIndex].type & (T_CONST | T_PTR)) || vartbl[VarIndex].level != 0) error("Invalid variable");
+            if((vartbl[VarIndex].type & (T_CONST | T_PTR)) || vartbl[VarIndex].level != 0)  StandardError(3);//error("Invalid variable");
             p = &argv[i][strlen(argv[i]) - 1];                      // pointer to the last char
             if(*p == ')') {                                         // strip off any empty brackets which indicate an array
                 p--;
@@ -296,7 +296,7 @@ void cmd_var(void) {
                 if(*p == '(')
                     *p = 0;
                 else
-                    error("Invalid variable");
+                	 StandardError(3);//error("Invalid variable");
             }
         }
         // load the current variable save table into RAM
@@ -376,7 +376,7 @@ void cmd_var(void) {
             if(type & T_INT) nbr *= sizeof(long long int);
             if((uint32_t)w - (uint32_t)SavedVarsFlash + 36 + nbr > SAVED_VAR_RAM_SIZE) {
 //                FlashWriteClose();
-                error("Not enough memory");
+                StandardError(24);//Not enough memory;
             }
             *w++=type;                              // save its type
             for(j = 0, p = vartbl[VarIndex].name; *p && j < MAXVARLEN; p++, j++)
@@ -433,7 +433,7 @@ void cmd_var(void) {
     	     SPIClose();
     	     return;
       }
-    error("Unknown command");
+    StandardError(7);//error("Unknown command");
 }
 
 /**********************************************************************************************
@@ -484,6 +484,7 @@ void SaveOptions(void) {
     }
     for(i = 0; i < 20; i++){
 		readback[i] = HAL_RTCEx_BKUPRead (&hrtc, i);
+		//PInt(i);PIntHC(readback[i]);PRet();
 	}
     for(i=0; i < 20; i++){
     	if(readback[i]!=*q++)error("Options not saved");
@@ -532,6 +533,7 @@ void ResetAllOptions(void) {
     Option.PIN = 0;
     Option.Baudrate = CONSOLE_BAUDRATE;
     Option.Autorun = false;
+    Option.NoReset = false;
     Option.Listcase = CONFIG_TITLE;
     Option.Tab = 2;
     Option.Restart = false;
@@ -550,6 +552,7 @@ void ResetAllOptions(void) {
    	Option.LCD_CS = 0;
    	Option.FLASH_CS=35;    // 35 default or 77 for mini
    	Option.NoScroll=0;    // Identify NO Scrolling for display
+   	Option.BGR=0;              //Is Colour INVERTed.
     Option.DISPLAY_CONSOLE = 0;
     Option.DefaultFont = 0x01;
     Option.DefaultFC = WHITE;
@@ -567,6 +570,8 @@ void ResetAllOptions(void) {
     Option.Refresh = 0;
 	Option.DISPLAY_WIDTH = 0;
 	Option.DISPLAY_HEIGHT = 0;
+	Option.spare0 = 0;
+	Option.spare1 = 0;
 
 
 }
@@ -688,7 +693,7 @@ void MIPS16 cmd_library(void) {
     /********************************************************************************************************************
      ******* LIBRARY SAVE **********************************************************************************************/
     if((p = checkstring(cmdline, "SAVE"))) {
-        if(CurrentLinePtr) error("Invalid in a program");
+        if(CurrentLinePtr) StandardError(23);//Invalid in a program;
         if(*ProgMemory != 0x01) return;
         checkend(p);
         ClearRuntime();
@@ -1030,7 +1035,7 @@ void MIPS16 cmd_library(void) {
          ******* LIBRARY PLIB **********************************************************************************************/
 #ifdef DUMP
         if(checkstring(cmdline, "PLIB")) {
-           if(CurrentLinePtr) error("Invalid in a program");
+           if(CurrentLinePtr) StandardError(23);//Invalid in a program;
             char *p;
             if(Option.ProgFlashSize == PROG_FLASH_SIZE) return;
            p = ProgMemory + Option.ProgFlashSize;
@@ -1045,7 +1050,7 @@ void MIPS16 cmd_library(void) {
         }
 
         if(checkstring(cmdline, "PPROG")) {
-          if(CurrentLinePtr) error("Invalid in a program");
+          if(CurrentLinePtr) StandardError(23);//Invalid in a program;
              char *p;
          //  if(Option.PROG_FLASH_SIZE== MAX_PROG_SIZE) return;
            p = ProgMemory ;
@@ -1077,7 +1082,7 @@ void MIPS16 cmd_library(void) {
         }
 #endif
 
-    error("Unknown command");
+    StandardError(7);//error("Unknown command");
 }
     /*
         if(checkstring(cmdline, "READ")) {
@@ -1329,11 +1334,11 @@ void cmd_flash(void){
     	    if(vartbl[VarIndex].type & T_INT) {
     	        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
     	        if(vartbl[VarIndex].dims[0] <= 0) {      // Not an array
-    	       	            error("Argument 1 must be integer array");
+    	       	            StandardError(15);//error("Argument 1 must be integer array");
     	       	}
     	       dest = (int64_t *)ptr1;
     	       q=(char *)&dest[0];
-    	    } else error("Argument 1 must be integer array");
+    	    } else StandardError(15);//error("Argument 1 must be integer array");
     	    j=(vartbl[VarIndex].dims[0] - OptionBase)+1;
     	    if(j*8 < 256 )error("Source array too small"); // 32*8 =256
 
@@ -1458,7 +1463,7 @@ void cmd_flash(void){
     	 SPIClose();
     	 return;
      }
-     error("Syntax");
+     SyntaxError();
 }
 
 #endif
@@ -1470,7 +1475,7 @@ void cmd_flash(void){
                 	int i;
                 	uint32_t *qq;
                 	q = findvar(p, V_FIND);
-                	if(!(vartbl[VarIndex].type & T_STR)) error("Invalid variable");
+                	if(!(vartbl[VarIndex].type & T_STR))  StandardError(3);//error("Invalid variable");
                 	qq=(uint32_t*)q;
             		for(i=0;i<20;i++){
             			qq[i]=HAL_RTCEx_BKUPRead (&hrtc, i);

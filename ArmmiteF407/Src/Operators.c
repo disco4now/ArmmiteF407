@@ -125,7 +125,7 @@ void op_add(void) {
 	else if(targ & T_INT)
 		iret = iarg1 + iarg2;
     else {
-		if(*sarg1 + *sarg2 > MAXSTRLEN) error("String too long");
+		if(*sarg1 + *sarg2 > MAXSTRLEN) StandardError(18);//String too long;
 		sret = GetTempStrMemory();								// this will last for the life of the command
 		Mstrcpy(sret, sarg1);
 		Mstrcat(sret, sarg2);

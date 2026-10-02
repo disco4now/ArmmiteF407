@@ -106,26 +106,27 @@ void cmd_inc(void){
 	getargs(&cmdline,3,",");
 	if(argc==1){
 		p = findvar(argv[0], V_FIND);
-		if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+		if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
         vtype = TypeMask(vartbl[VarIndex].type);
-        if(vtype & T_STR) error("Invalid variable");                // sanity check
+        if(vtype & T_STR) StandardError(3);//error("Invalid variable");                // sanity check
 		if(vtype & T_NBR)
             (*(MMFLOAT *)p) = (*(MMFLOAT *)p) + 1.0;
 		else if(vtype & T_INT)*(long long int *)p = *(long long int *)p + 1;
-		else error("Syntax");
+		else SyntaxError();
 	} else {
 		p = findvar(argv[0], V_FIND);
-		if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+		if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
         vtype = TypeMask(vartbl[VarIndex].type);
         if(vtype & T_STR){
+        	int size=vartbl[VarIndex].size;
         	q=getstring(argv[2]);
-        	if(*p + *q > MAXSTRLEN) error("String too long");
+        	if(*p + *q > size) StandardError(18);//String too long;
         	Mstrcat(p, q);
         } else if(vtype & T_NBR){
         	 (*(MMFLOAT *)p) = (*(MMFLOAT *)p)+getnumber(argv[2]);
         } else if(vtype & T_INT){
         	*(long long int *)p = *(long long int *)p+getinteger(argv[2]);
-        } else error("syntax");
+        } else SyntaxError();
  	}
 }
 // the PRINT command
@@ -147,9 +148,9 @@ void MIPS16 cmd_print(void) {
 		argv[0]++;
          if((*argv[0] == 'G') || (*argv[0] == 'g')){
             argv[0]++;
-            if(!((*argv[0] == 'P') || (*argv[0] == 'p')))error("Syntax");
+            if(!((*argv[0] == 'P') || (*argv[0] == 'p')))SyntaxError();
             argv[0]++;
-            if(!((*argv[0] == 'S') || (*argv[0] == 's')))error("Syntax");
+            if(!((*argv[0] == 'S') || (*argv[0] == 's')))SyntaxError();
             if(!GPSchannel) error("GPS not activated");
             if(argc!=3) error("Only a single string parameter allowed");
             p = argv[2];
@@ -233,24 +234,24 @@ void cmd_let(void) {
 
 	// search through the line looking for the equals sign
 	while(*p1 && tokenfunction(*p1) != op_equal) p1++;
-	if(!*p1) error("Unknown command");
+	if(!*p1) StandardError(7);//error("Unknown command");
 
 	// check that we have a straight forward variable
 	p2 = skipvar(cmdline, false);
 	skipspace(p2);
-	if(p1 != p2) error("Syntax");
+	if(p1 != p2) SyntaxError();
 
 	// create the variable and get the length if it is a string
 	p2 = findvar(cmdline, V_FIND);
     size = vartbl[VarIndex].size;
-    if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+    if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
 
 	// step over the equals sign, evaluate the rest of the command and save in the variable
 	p1++;
 	if(vartbl[VarIndex].type & T_STR) {
 		t = T_STR;
 		p1 = evaluate(p1, &f, &i64, &s, &t, false);
-		if(*s > size) error("String too long");
+		if(*s > size) StandardError(18);//String too long;
 		Mstrcpy(p2, s);
 	}
 	else if(vartbl[VarIndex].type & T_NBR) {
@@ -541,7 +542,7 @@ void MIPS16 cmd_continue(void) {
     }
     // must be a normal CONTINUE
 	checkend(cmdline);
-	if(CurrentLinePtr) error("Invalid in a program");
+	if(CurrentLinePtr) StandardError(23);//Invalid in a program;
 	if(ContinuePoint == NULL) error("Cannot continue");
     IgnorePIN = false;
 	nextstmt = ContinuePoint;
@@ -549,7 +550,7 @@ void MIPS16 cmd_continue(void) {
 
 
 void MIPS16 cmd_new(void) {
-//    if(CurrentLinePtr) error("Invalid in a program");
+//    if(CurrentLinePtr) StandardError(23);//Invalid in a program;
 	checkend(cmdline);
     ClearSavedVars();                                               // clear any saved variables
     FlashWriteInit(PROGRAM_FLASH);                     // erase program memory
@@ -613,7 +614,7 @@ retest_an_if:
 		if(argc >= 3 && *argv[2] == cmdIF) argc = 3;                // this is IF xx=yy THEN IF ... so we want to evaluate only the first 3
 		if(argc >= 5 && *argv[4] == cmdIF) argc = 5;                // this is IF xx=yy THEN cmd ELSE IF ... so we want to evaluate only the first 5
 
-		if(argc == 4 || (argc == 5 && *argv[3] != ss[1])) error("Syntax");
+		if(argc == 4 || (argc == 5 && *argv[3] != ss[1])) SyntaxError();
 
 		r = (getnumber(argv[0]) != 0);								// evaluate the expression controlling the if statement
 
@@ -682,7 +683,7 @@ retest_an_if:
 						p++;                                        // step over the token
 						skipspace(p);
 						CurrentLinePtr = rp;
-						if(*p == 0) error("Syntax");                // there must be a test after the elseif
+						if(*p == 0) SyntaxError();                // there must be a test after the elseif
 						cmdline = p;
 						skipelement(p);
 						nextstmt = p;
@@ -813,12 +814,12 @@ void cmd_select(void) {
                     if(tokentype(*p) & T_OPER)
                         o = *p++ - C_BASETOKEN;                     // get the operator
                     else
-                        error("Syntax");
+                        SyntaxError();
                     if(type & T_NBR) ft = f;
                     if(type & T_INT) i64t = i64;
                     if(type & T_STR) st = s;
                     while(o != E_END) p = doexpr(p, &ft, &i64t, &st, &o, &t); // get the right hand side of the expression and evaluate the operator in o
-                    if(!(t & T_INT)) error("Syntax");     			// comparisons must always return an integer
+                    if(!(t & T_INT)) SyntaxError();     			// comparisons must always return an integer
                     if(i64t) {                                      // evaluates to true
                         skipelement(p);
                         nextstmt = p;
@@ -938,7 +939,7 @@ void MIPS16 cmd_input(void) {
 		}
 	}
 
-	if(argc - i < 1) error("Syntax");						        // no variable to input to
+	if(argc - i < 1) SyntaxError();						        // no variable to input to
 
 	MMgetline(fnbr, inpbuf);									    // get the line
 	p = inpbuf;
@@ -961,9 +962,9 @@ void MIPS16 cmd_input(void) {
 		}
 		*sp = 0;													// terminate the string
 		tp = findvar(argv[i], V_FIND);								// get the variable and save its new value
-        if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+        if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
 		if(vartbl[VarIndex].type & T_STR) {
-    		if(strlen(s) > vartbl[VarIndex].size) error("String too long");
+    		if(strlen(s) > vartbl[VarIndex].size) StandardError(18);//String too long;
 			strcpy(tp, s);
 			CtoM(tp);												// convert to a MMBasic string
 		} else
@@ -1000,7 +1001,7 @@ void MIPS16 cmd_trace(void) {
             if(++i >= TRACE_BUFF_SIZE) i = 0;
         }
     }
-    else error("Unknown command");
+    else StandardError(7);//error("Unknown command");
 }
 
 
@@ -1026,7 +1027,7 @@ void cmd_for(void) {
     {                                                               // start a new block
         getargs(&cmdline, 7, ss);                                   // getargs macro must be the first executable stmt in a block
         if(argc < 5 || argc == 6 || *argv[1] != ss[0] || *argv[3] != ss[1]) error("FOR with misplaced = or TO");
-        if(argc == 6 || (argc == 7 && *argv[5] != ss[2])) error("Syntax");
+        if(argc == 6 || (argc == 7 && *argv[5] != ss[2])) SyntaxError();
 
         // get the variable name and trim any spaces
         vname = argv[0];
@@ -1034,9 +1035,9 @@ void cmd_for(void) {
         while(*vname && vname[strlen(vname) - 1] == ' ') vname[strlen(vname) - 1] = 0;
         vlen = strlen(vname);
         vptr = findvar(argv[0], V_FIND);                            // create the variable
-        if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+        if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
         vtype = TypeMask(vartbl[VarIndex].type);
-        if(vtype & T_STR) error("Invalid variable");                // sanity check
+        if(vtype & T_STR)  StandardError(3);//error("Invalid variable");               // sanity check
 
         // check if the FOR variable is already in the stack and remove it if it is
         // this is necessary as the program can jump out of the loop without hitting
@@ -1133,7 +1134,7 @@ void cmd_next(void) {
 
     for(vcnt = i = 0; i < argc; i++) {
         if(i & 0x01) {
-            if(*argv[i] != ',') error("Syntax");
+            if(*argv[i] != ',') SyntaxError();
         } else
             vtbl[vcnt++] = findvar(argv[i], V_FIND | V_NOFIND_ERR); // find the variable and error if not found
     }
@@ -1205,7 +1206,7 @@ void cmd_next(void) {
 void cmd_do(void) {
     int i;
     char *p, *tp, *evalp;
-    if(cmdtoken==cmdWHILE)error("Unknown command");
+    if(cmdtoken==cmdWHILE)StandardError(7);//error("Unknown command");
 	// if it is a DO loop find the WHILE token and (if found) get a pointer to its expression
 	while(*cmdline && *cmdline != tokenWHILE) cmdline++;
 	if(*cmdline == tokenWHILE) {
@@ -1292,7 +1293,7 @@ void cmd_loop(void) {
                     else if(*cmdline == tokenUNTIL)
                         tst = (getnumber(++cmdline) == 0);          // evaluate the expression
                     else
-                        error("Syntax");
+                        SyntaxError();
                 }
                 else {
                     tst = 1;                                        // and loop forever
@@ -1342,7 +1343,17 @@ void cmd_exit(void) {
 
 void MIPS16 cmd_error(void) {
 	char *s;
-	if(*cmdline && *cmdline != '\'') {
+	char *p;
+    if((p=checkstring(cmdline, "HARDFAULT"))){
+	   if(!CurrentLinePtr){
+		error("only in Program");
+	   }else{
+	    //int *harderror = NULL; *harderror = 10;  //G.A. Generate hard error
+	    //*(volatile uint32_t*)0x10000 = 1;        //BUS errror
+	    asm volatile (".word 0xf7f0a000\n");     //Undefined instruction
+	 }
+
+    }else if(*cmdline && *cmdline != '\'') {
 		s = getCstring(cmdline);
 		char *p=GetTempMemory(STRINGSIZE);
 		strcpy(p,"[");
@@ -1370,9 +1381,9 @@ void cmd_subfun(void) {
 	if(cmdtoken == cmdSUB) {
 	    returntoken = cmdENDSUB;
 	    errtoken = cmdENDFUNCTION;
-	} else if(cmdtoken == cmdComment) {
-	    returntoken = cmdEndComment;
-	    errtoken = cmdENDFUNCTION;
+	//} else if(cmdtoken == cmdComment) {
+	//    returntoken = cmdEndComment;
+	//    errtoken = cmdENDFUNCTION;
 	} else {
 	    returntoken = cmdENDFUNCTION;
 	    errtoken = cmdENDSUB;
@@ -1380,8 +1391,8 @@ void cmd_subfun(void) {
 	p = nextstmt;
 	while(1) {
         p = GetNextCommand(p, NULL, "No matching END declaration");
-       // if(*p == cmdSUB || *p == cmdFUN  || *p == errtoken) error("No matching END declaration");
-        if(*p == cmdSUB || *p == cmdFUN || *p == cmdComment || *p == errtoken) error("No matching END declaration");
+        //if(*p == cmdSUB || *p == cmdFUN || *p == cmdComment || *p == errtoken) error("No matching END declaration");
+        if(*p == cmdSUB || *p == cmdFUN || *p == errtoken) error("No matching END declaration");
 		if(*p == returntoken) {                                     // found the next return
     		skipelement(p);
     		nextstmt = p;                                           // point to the next command
@@ -1389,6 +1400,8 @@ void cmd_subfun(void) {
         }
     }
 }
+
+
 
 
 /* Fixed as suggested by tom ********************/
@@ -1409,10 +1422,39 @@ void cmd_gosub(void) {
 }
 
 void cmd_mid(void){
+	char *p;
+	getargs(&cmdline,5,",");
+	findvar(argv[0], V_NOFIND_ERR);
+    if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
+	if(!(vartbl[VarIndex].type & T_STR)) error("Not a string");
+	int size=vartbl[VarIndex].size;
+	char *sourcestring=getstring(argv[0]);
+	int start=getint(argv[2],1,sourcestring[0]);
+	int num=0;
+	if(argc==5)num=getint(argv[4],1,sourcestring[0]);
+	if(start+num-1>sourcestring[0])error("Selection exceeds length of string");
+	while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++;
+	if(!*cmdline) SyntaxError();
+	++cmdline;
+	if(!*cmdline) SyntaxError();
+	char *value = getstring(cmdline);
+	if(num==0)num=value[0];
+	p=&value[1];
+	if(num==value[0]) memcpy(&sourcestring[start],p,num);
+	else {
+		int change=value[0]-num;
+		if(sourcestring[0]+change>size)StandardError(18);//String too long;
+		memmove(&sourcestring[start+value[0]],&sourcestring[start+num],sourcestring[0]-(start+num-1));
+		sourcestring[0]+=change;
+		memcpy(&sourcestring[start],p,value[0]);
+	}
+}
+/*
+void cmd_mid(void){
 	 char *p;
 	getargs(&cmdline,5,",");
 	findvar(argv[0], V_NOFIND_ERR);
-    if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+    if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
 	if(!(vartbl[VarIndex].type & T_STR)) error("Not a string");
 	char *sourcestring=getstring(argv[0]);
 	int start=getint(argv[2],1,sourcestring[0]);
@@ -1420,21 +1462,22 @@ void cmd_mid(void){
 	if(argc==5)num=getint(argv[4],1,sourcestring[0]);
 	if(start+num-1>sourcestring[0])error("Selection exceeds length of string");
 	while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++;
-	if(!*cmdline) error("Syntax");
+	if(!*cmdline) SyntaxError();
 	++cmdline;
-	if(!*cmdline) error("Syntax");
+	if(!*cmdline) SyntaxError();
 	char *value = getstring(cmdline);
 	if(num==0)num=value[0];
 	p=&value[1];
 	if(num==value[0]) memcpy(&sourcestring[start],p,num);
 	else {
 		int change=value[0]-num;
-		if(sourcestring[0]+change>255)error("String too long");
+		if(sourcestring[0]+change>255)StandardError(18);//String too long;
 		memmove(&sourcestring[start+value[0]],&sourcestring[start+num],sourcestring[0]-(start+num-1));
 		sourcestring[0]+=change;
 		memcpy(&sourcestring[start],p,value[0]);
 	}
 }
+*/
 void cmd_return(void) {
  	checkend(cmdline);
 	if(gosubindex == 0 || gosubstack[gosubindex - 1] == NULL) error("Nothing to return to");
@@ -1475,14 +1518,14 @@ void MIPS16 cmd_read(void) {
    		return;
    	}
     getargs(&cmdline, (MAX_ARG_COUNT * 2) - 1, ",");                // getargs macro must be the first executable stmt in a block
-    if(argc == 0) error("Syntax");
+    if(argc == 0) SyntaxError();
 	// first count the elements and do the syntax checking
     for(vcnt = i = 0; i < argc; i++) {
         if(i & 0x01) {
-            if(*argv[i] != ',') error("Syntax");
+            if(*argv[i] != ',') SyntaxError();
         } else {
 			findvar(argv[i], V_FIND | V_EMPTY_OK);
-			if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+			if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
 			card=1;
 			if(emptyarray){ //empty array
 				for(k=0;k<MAXDIM;k++){
@@ -1531,13 +1574,13 @@ void MIPS16 cmd_read(void) {
    //    }
    //  }
     p = lineptr = NextDataLine;
-    if(*p == 0xff) error("No DATA to read");                        // error if there is no program
+    if(*p == 0xff) StandardError(17);//No DATA to read;                        // error if there is no program
 
   // search looking for a DATA statement.  We keep returning to this point until all the data is found
 search_again:
     while(1) {
         if(*p == 0) p++;                                            // if it is at the end of an element skip the zero marker
-        if(*p == 0 /*|| *p == 0xff*/) error("No DATA to read");    // 2nd 0 so end of the program and we still need more data
+        if(*p == 0 /*|| *p == 0xff*/) StandardError(17);//No DATA to read;    // 2nd 0 so end of the program and we still need more data
         if(*p == T_NEWLINE) lineptr = p++;                         // fix as per picomite if token 255 in use
         if(*p == T_LINENBR) p += 3;
         skipspace(p);
@@ -1551,12 +1594,12 @@ search_again:
     NextDataLine = lineptr;
     p++;                                                            // step over the token
     skipspace(p);
-    if(!*p || *p == '\'') { CurrentLinePtr = lineptr; error("No DATA to read"); }
+    if(!*p || *p == '\'') { CurrentLinePtr = lineptr; StandardError(17);}//No DATA to read; }
 
         // we have a DATA statement, first split the line into arguments
         {                                                           // new block, the getargs macro must be the first executable stmt in a block
         getargs(&p, (MAX_ARG_COUNT * 2) - 1, ",");
-        if((argc & 1) == 0) { CurrentLinePtr = lineptr; error("Syntax"); }
+        if((argc & 1) == 0) { CurrentLinePtr = lineptr; SyntaxError(); }
         // now step through the variables on the READ line and get their new values from the argument list
         // we set the line number to the number of the DATA stmt so that any errors are reported correctly
         while(vidx < vcnt) {
@@ -1581,7 +1624,7 @@ search_again:
 	                            i+=(*p2++)-48;
 	                            i*=10;
 	                            i+=(*p2++)-48;
-	                            if(i==0)error("Null character \\000 in escape sequence - use CHR$(0)","$");
+	                            if(i==0)StandardErrorParamS(16,"$");
 	                            *p1++=i;
 	                        } else {
 	                            p2++;
@@ -1633,7 +1676,7 @@ search_again:
 	                                        i = (i << 4) | ((toupper(*p2) >= 'A') ? toupper(*p2) - 'A' + 10 : *p2 - '0');
 	                                        p++;
 	                                        i = (i << 4) | ((toupper(*p2) >= 'A') ? toupper(*p2) - 'A' + 10 : *p2 - '0');
-	                                        if(i==0)error("Null character \\&00 in escape sequence - use CHR$(0)","$");
+	                                        if(i==0)StandardErrorParamS(16,"$");
 	                                        p2++;
 	                                        *p1++=i;
 	                                    } else *p1++='x';
@@ -1651,7 +1694,7 @@ search_again:
                         *p1 = *p2;                                  // copy up to the comma
                     }
                 }
-                if(len > vsize[vidx]) error("String too long");
+                if(len > vsize[vidx]) StandardError(18);//String too long;
                 *p1 = 0;                                            // terminate the string
                 CtoM(vtbl[vidx]);                                   // convert to a MMBasic string
             }
@@ -1709,12 +1752,12 @@ void MIPS16 cmd_restore(void) {
 			if(ptr){
 				if(vartbl[VarIndex].type & T_NBR) {
 					if(vartbl[VarIndex].dims[0] > 0) {		// Not an array
-						error("Syntax");
+						SyntaxError();
 					}
 					NextDataLine = findline(getinteger(cmdline), true);
 				} else if(vartbl[VarIndex].type & T_INT) {
 					if(vartbl[VarIndex].dims[0] > 0) {		// Not an array
-						error("Syntax");
+						SyntaxError();
 					}
 					NextDataLine = findline(getinteger(cmdline), true);
 				} else {
@@ -1740,7 +1783,7 @@ void MIPS16 cmd_lineinput(void) {
 	char *vp;
 	int i, fnbr;
 	getargs(&cmdline, 3, ",;");										// this is a macro and must be the first executable stmt
-	if(argc == 0 || argc == 2) error("Syntax");
+	if(argc == 0 || argc == 2) SyntaxError();
 
 	i = 0;
 	fnbr = 0;
@@ -1752,18 +1795,18 @@ void MIPS16 cmd_lineinput(void) {
 		}
 		else {
 			// is the first argument a prompt?  if so, print it otherwise there are too many arguments
-			if(*argv[1] != ',' && *argv[1] != ';') error("Syntax");
+			if(*argv[1] != ',' && *argv[1] != ';') SyntaxError();
 			MMfputs(getstring(argv[0]), 0);
 		}
 	i = 2;
 	}
 
-	if(argc - i != 1) error("Syntax");
+	if(argc - i != 1) SyntaxError();
 	vp = findvar(argv[i], V_FIND);
-    if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
-	if(!(vartbl[VarIndex].type & T_STR)) error("Invalid variable");
+    if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
+	if(!(vartbl[VarIndex].type & T_STR))  StandardError(3);//error("Invalid variable");
 	MMgetline(fnbr, inpbuf);									    // get the input line
-	if(strlen(inpbuf) > vartbl[VarIndex].size) error("String too long");
+	if(strlen(inpbuf) > vartbl[VarIndex].size) StandardError(18);//String too long;
 	strcpy(vp, inpbuf);
 	CtoM(vp);														// convert to a MMBasic string
 }
@@ -1814,6 +1857,11 @@ void cmd_on(void) {
             OptionErrorSkip = -1;
             return;
         }
+		else if(checkstring(p, "RESTART"))
+		{
+			OptionErrorSkip = 999999;
+			return;
+		}
         if((p = checkstring(p, "SKIP"))) {
             if(*p == 0 || *p == '\'')
                 OptionErrorSkip = 2;
@@ -1821,7 +1869,7 @@ void cmd_on(void) {
                 OptionErrorSkip = getint(p, 1, 10000) + 1;
             return;
         }
-        error("Syntax");
+        SyntaxError();
 	}
 
 	// if we got here the command must be the traditional:  ON nbr GOTO|GOSUB line1, line2,... etc
@@ -1832,8 +1880,8 @@ void cmd_on(void) {
 	ss[3] = 0;
 	{																// start a new block
 		getargs(&cmdline, (MAX_ARG_COUNT * 2) - 1, ss);				// getargs macro must be the first executable stmt in a block
-		if(argc < 3 || !(*argv[1] == ss[0] || *argv[1] == ss[1])) error("Syntax");
-		if(argc%2 == 0) error("Syntax");
+		if(argc < 3 || !(*argv[1] == ss[0] || *argv[1] == ss[1])) SyntaxError();
+		if(argc%2 == 0) SyntaxError();
 
 		r = getint(argv[0], 0, 255);									// evaluate the expression controlling the statement
 		if(r == 0 || r > argc/2) return;							// microsoft say that we just go on to the next line
@@ -1919,7 +1967,7 @@ void MIPS16 cmd_dim(void) {
     ImpliedType = type;
     {                                                               // getargs macro must be the first executable stmt in a block
         getargs(&p, (MAX_ARG_COUNT * 2) - 1, ",");
-        if((argc & 0x01) == 0) error("Syntax");
+        if((argc & 0x01) == 0) SyntaxError();
 
         for(i = 0; i < argc; i += 2) {
             p = skipvar(argv[i], false);                            // point to after the variable
@@ -2022,12 +2070,12 @@ void MIPS16 cmd_const(void) {
     int i, type;
 
 	getargs(&cmdline, (MAX_ARG_COUNT * 2) - 1, ",");				// getargs macro must be the first executable stmt in a block
-	if((argc & 0x01) == 0) error("Syntax");
+	if((argc & 0x01) == 0) SyntaxError();
 
     for(i = 0; i < argc; i += 2) {
         p = skipvar(argv[i], false);                                // point to after the variable
         skipspace(p);
-        if(tokenfunction(*p) != op_equal) error("Syntax");  // must be followed by an equals sign
+        if(tokenfunction(*p) != op_equal) SyntaxError();  // must be followed by an equals sign
         p++;                                                        // step over the equals sign
         type = T_NOTYPE;
         v = DoExpression(p, &type);                                 // evaluate the constant's value
@@ -2040,7 +2088,15 @@ void MIPS16 cmd_const(void) {
         else {
             if(type & T_NBR) vartbl[VarIndex].val.f = *(MMFLOAT *)v;           // and set its value
             if(type & T_INT) vartbl[VarIndex].val.i = *(long long int *)v;
-            if(type & T_STR) Mstrcpy(vartbl[VarIndex].val.s, (char *)v);
+            //if(type & T_STR) Mstrcpy(vartbl[VarIndex].val.s, (char *)v);
+            // CONST string from Picomite 6.00.02RC5
+            if(type & T_STR) {
+              if((char)*(char *)v<(MAXDIM-1)*sizeof(vartbl[VarIndex].dims[1])){
+             	FreeMemorySafe((void **)&vartbl[VarIndex].val.s);
+             	vartbl[VarIndex].val.s=(void *)&vartbl[VarIndex].dims[1];
+              }
+              Mstrcpy((char *)vartbl[VarIndex].val.s, (char *)v);
+        	}
         }
     }
 }
@@ -2053,7 +2109,7 @@ void MIPS16 cmd_erase(void) {
 	char p[MAXVARLEN + 1], *s, *x;
 
 	getargs(&cmdline, (MAX_ARG_COUNT * 2) - 1, ",");				// getargs macro must be the first executable stmt in a block
-	if((argc & 0x01) == 0) error("Argument count");
+	if((argc & 0x01) == 0) StandardError(2);//error("Argument count");
 
 	for(i = 0; i < argc; i += 2) {
 		strcpy((char *)p, argv[i]);
@@ -2208,7 +2264,7 @@ void execute_one_command(char *p) {
         if(i >= 0)                                                  // >= 0 means it is a user defined command
             DefinedSubFun(false, p, i, NULL, NULL, NULL, NULL);
         else
-            error("Unknown command");
+            StandardError(7);//error("Unknown command");
     }
     ClearTempMemory();                                              // at the end of each command we need to clear any temporary string vars
 }
@@ -2236,7 +2292,7 @@ void execute(char* mycmd) {
 			}
 			i++;
 		}
-		multi=false;
+		//multi=false;
 		tokenise(true);                                                 // and tokenise it (the result is in tknbuf)
 		memset(inpbuf, 0, STRINGSIZE);
 		tknbuf[strlen((char *)tknbuf)] = 0;

@@ -133,10 +133,32 @@ if(processtick){
     	SDtimer=1000;
     	if(!(SDCardStat & STA_NOINIT))checkSD=1; //card supposed to be mounted so set a check
     }
-    if((Timer4 % 16) == 0){ //process USB console output every 16 msec
+ /*
+    //DTR experiment
+	// In your main while(1) loop:
+    if((Timer4 % 1000) == 0){
+	if (CDC_Get_DTR_State() == 1)
+		{
+		    // The host PC terminal is open and ready to receive data
+		    //  CDC_Transmit_FS((uint8_t*)"Hello Host!\n", 12);
+		   	MMPrintString("DTR  Set \r\n");
+		    HAL_Delay(100);
+		}
+		else
+		{
+		   // Port is not open, perhaps buffer data or skip transmission
+		  MMPrintString("DTR not Set \r\n");
+		  HAL_Delay(100);
+		}
+    }
+*/
+    if((Timer4 % 16) == 0){ //process USB console output every 16 msec   'Original value
+   	//if((Timer4 % 32) == 0){ //process USB console output every 16 msec   'Trying 16 G.A. 13/07/2026
+   	//if((Timer4 % 8) == 0){ //process USB console output every 8 msec	   'Trying  8 G.A. 08/11/2025
     	audio_checks();
     	if(Option.SerialConDisabled){
-    		if(ConsoleTxBufHead!=ConsoleTxBufTail){
+    	 //if(CDC_Get_RTS_State()==1){
+     		if(ConsoleTxBufHead!=ConsoleTxBufTail){
     			if(ConsoleTxBufHead>ConsoleTxBufTail){
     				if(CDC_Transmit_FS((uint8_t *)&ConsoleTxBuf[ConsoleTxBufTail],ConsoleTxBufHead-ConsoleTxBufTail ) != USBD_BUSY)ConsoleTxBufTail=ConsoleTxBufHead;
     			} else {
@@ -145,6 +167,7 @@ if(processtick){
     				}
     			}
     		}
+    	 //}
     	}
     }
 //    if(LCD_BL_Period){
@@ -166,13 +189,27 @@ if(processtick){
 	if(WDTimer) {
     	if(--WDTimer == 0) {
             _excep_code = WATCHDOG_TIMEOUT;
-             SoftReset();                                            // crude way of implementing a watchdog timer.
+
+            if (!CurrentLinePtr)
+                _excep_addr =0;
+            else if(CurrentLinePtr < ProgMemory + Option.ProgFlashSize)
+             	_excep_addr = CountLines(CurrentLinePtr);
+            else
+               _excep_addr = 65000;
+
+            SoftReset();                                            // crude way of implementing a watchdog timer.
         }
     }
 //#ifdef CMD_EXECUTE
     if (ScrewUpTimer) {
         if (--ScrewUpTimer == 0) {
             _excep_code = SCREWUP_TIMEOUT;
+            if (!CurrentLinePtr)
+                _excep_addr =0;
+            else if(CurrentLinePtr < ProgMemory + Option.ProgFlashSize)
+             	_excep_addr = CountLines(CurrentLinePtr);
+            else
+               _excep_addr = 65000;
             SoftReset();                                            // crude way of implementing a watchdog timer.
         }
     }

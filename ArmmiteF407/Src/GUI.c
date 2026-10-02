@@ -216,11 +216,11 @@ int GetCtrlParams(int type, char *p) {
     struct s_GaugeS *GaugeS;                                        // in case we are dealing with a GAUGE control
 
     getargs(&p, 40, ",");
-    if((argc & 1) != 1) error("Argument count");
+    if((argc & 1) != 1) StandardError(2);//error("Argument count");
     if(*argv[0] == '#') argv[0]++;
     r = getint(argv[0], 1, Option.MaxCtrls - 1);
     if(Ctrl[r].type) error("GUI reference number #% is in use", r);
-    if(argc < 5) error("Argument count");
+    if(argc < 5) StandardError(2);//error("Argument count");
     a = 0;
 
     // setup the defaults
@@ -287,7 +287,7 @@ int GetCtrlParams(int type, char *p) {
 
     // get x1 and y1 - all controls require these
     Ctrl[r].x1 = getint(argv[a += 2], 0, HRes);
-    if(argc < a) error("Argument count");
+    if(argc < a) StandardError(2);//error("Argument count");
     Ctrl[r].y1 = getint(argv[a += 2], 0, VRes);
 
     // the fourth argument in GUI CAPTION is the justification
@@ -398,7 +398,7 @@ int GetCtrlParams(int type, char *p) {
         if(type == CTRL_GAUGE) Ctrl[r].y2 = -1;                     // on first use draw the full gauge
     }
 
-    if(argc > a + 1) error("Argument count");
+    if(argc > a + 1) StandardError(2);//error("Argument count");
     Ctrl[r].type = type;
     if(type == CTRL_GAUGE || type == CTRL_BARGAUGE) {
         Ctrl[r].value = Ctrl[r].min;
@@ -416,7 +416,7 @@ void cmd_gui(void) {
     int r;
     char *p;
 
-    if(!Option.DISPLAY_TYPE) error("Display not configured");
+    if(!Option.DISPLAY_TYPE) StandardError(4);//error("Display not configured");
 
     if((p = checkstring(cmdline, "PAGE"))) {
     	cmd_GUIpage(p);
@@ -537,7 +537,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "DELETE"))) {
         int i, r;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1)) error("Argument count");
+        if(!(argc & 1)) StandardError(2);//error("Argument count");
         if(checkstring(argv[0], "ALL")) {
             for(r = 1; r < Option.MaxCtrls; r++)
                 if(Ctrl[r].type != 0) {
@@ -564,7 +564,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "DISABLE"))) {
         int i, r;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1)) error("Argument count");
+        if(!(argc & 1)) StandardError(2);//error("Argument count");
         if(checkstring(argv[0], "ALL")) {
             for(r = 1; r < Option.MaxCtrls; r++)
                 if(CurrentPages & (1 << Ctrl[r].page))
@@ -583,7 +583,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "HIDE"))) {
         int i, r;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1)) error("Argument count");
+        if(!(argc & 1)) StandardError(2);//error("Argument count");
         if(checkstring(argv[0], "ALL")) {
             for(r = 1; r < Option.MaxCtrls; r++)
                 if(CurrentPages & (1 << Ctrl[r].page))
@@ -602,7 +602,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "ENABLE"))) {
         int i, r;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1)) error("Argument count");
+        if(!(argc & 1)) StandardError(2);//error("Argument count");
         if(checkstring(argv[0], "ALL")) {
             for(r = 1; r < Option.MaxCtrls; r++) {
                 if(CurrentPages & (1 << Ctrl[r].page)) {
@@ -625,7 +625,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "SHOW"))) {
         int i, r;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1)) error("Argument count");
+        if(!(argc & 1)) StandardError(2);//error("Argument count");
         if(checkstring(argv[0], "ALL")) {
             for(r = 1; r < Option.MaxCtrls; r++) {
                 if(CurrentPages & (1 << Ctrl[r].page)) {
@@ -648,7 +648,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "RESTORE"))) {
         int i, r;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1)) error("Argument count");
+        if(!(argc & 1)) StandardError(2);//error("Argument count");
         if(checkstring(argv[0], "ALL")) {
             for(r = 1; r < Option.MaxCtrls; r++) {
                     if(CurrentPages & (1 << Ctrl[r].page)) {
@@ -671,7 +671,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "REDRAW"))) {
         int i, r;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1)) error("Argument count");
+        if(!(argc & 1)) StandardError(2);//error("Argument count");
         if(checkstring(argv[0], "ALL")) {
             ClearScreen(gui_bcolour);
             for(r = 1; r < Option.MaxCtrls; r++)
@@ -694,7 +694,7 @@ void cmd_gui(void) {
     if((p = checkstring(cmdline, "FCOLOUR")) || (p = checkstring(cmdline, "BCOLOUR"))) {
         int i, r, c;
         getargs(&p, MAX_ARG_COUNT, ",");
-        if(!(argc & 1) || argc < 3) error("Argument count");
+        if(!(argc & 1) || argc < 3) StandardError(2);//error("Argument count");
         c = getint(argv[0], BLACK, WHITE);
         for(i = 2; i < argc; i += 2) {
             if(*argv[i] == '#') argv[i]++;
@@ -752,7 +752,7 @@ void cmd_GUIpage(char *p) {
     int i, r, OldPages;
 
     getargs(&p, MAX_ARG_COUNT, ",");
-    if(!(argc & 1)) error("Argument count");
+    if(!(argc & 1)) StandardError(2);//error("Argument count");
     OldPages = CurrentPages;
     CurrentPages = 0;
     for(i = 0; i < argc; i += 2) {                                  // get the new set of pages
@@ -2147,7 +2147,7 @@ void fun_msgbox(void) {
     long long int timeout;
 
   getargs(&ep, 9, ",");
-    if(argc < 3) error("Argument count");
+    if(argc < 3) StandardError(2);//error("Argument count");
     msg = GetMemory(MAX_CAPTION_LINES * MAXSTRLEN);
     btn = GetMemory(4 * MAXSTRLEN);
 
@@ -2225,7 +2225,7 @@ void fun_msgbox(void) {
 
 void fun_ctrlval(void) {
     int r;
-    if(!Option.DISPLAY_TYPE) error("Display not configured");
+    if(!Option.DISPLAY_TYPE) StandardError(4);//error("Display not configured");
     if(*ep == '#') ep++;
     r = getint(ep, 1, Option.MaxCtrls);
     if(Ctrl[r].type == 0) error("Control #% does not exist", r);
@@ -2271,10 +2271,10 @@ void cmd_ctrlval(void) {
   r = getint(cmdline, 1, Option.MaxCtrls);
     if(Ctrl[r].type == 0) error("Control #% does not exist", r);
   while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++; // search for the = symbol
-  if(!*cmdline) error("Syntax");
+  if(!*cmdline) SyntaxError();
   ++cmdline;                                                        // step over the = symbol
     skipspace(cmdline);
-  if(!*cmdline || *cmdline == '\'') error("Syntax");
+  if(!*cmdline || *cmdline == '\'') SyntaxError();
     switch(Ctrl[r].type) {
         case CTRL_BUTTON:
         case CTRL_SWITCH:
@@ -2345,14 +2345,14 @@ void cmd_ctrlval(void) {
 
 
 void fun_mmhpos(void) {
-    if(!Option.DISPLAY_TYPE) error("Display not configured");
+    if(!Option.DISPLAY_TYPE) StandardError(4);//error("Display not configured");
     iret = CurrentX;
     targ = T_INT;
 }
 
 
 void fun_mmvpos(void) {
-    if(!Option.DISPLAY_TYPE) error("Display not configured");
+    if(!Option.DISPLAY_TYPE) StandardError(4);//error("Display not configured");
     iret = CurrentY;
     targ = T_INT;
 }
@@ -2362,7 +2362,7 @@ void fun_mmvpos(void) {
 void cmd_backlight(void) {
 	    int i;
 	    getargs(&cmdline,3,",");
-	    if(!(argc & 1) || argc == 0) error("Syntax");
+	    if(!(argc & 1) || argc == 0) SyntaxError();
         i=getint(argv[0], 0, 100);
 		//if(HRes != 0){
 			if(argc==3){
@@ -2375,7 +2375,7 @@ void cmd_backlight(void) {
 				 Option.DefaultBrightness=i+101;
 				 SaveOptions();
 			  }else{
-				error("Syntax");
+				SyntaxError();
 			  }
 
 	       }

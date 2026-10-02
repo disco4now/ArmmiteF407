@@ -72,7 +72,7 @@ void cmd_pwm(void) {
 
 	getargs(&cmdline, 15, ",");
 	if ((argc & 0x01) == 0 || argc < 3)
-		error("Invalid syntax");
+		SyntaxError();//error("Invalid syntax");
 
 	channel = getint(argv[0], 1, 3) - 1;
 	if((canopen==1 ) && channel==1){
@@ -88,12 +88,14 @@ void cmd_pwm(void) {
 	}
 
 	if (cmdtoken == GetCommandValue("PWM")) {
-		f = getint(argv[2], 1, 20000000);
+		//f = getint(argv[2], 1, 20000000);
+		f = getint(argv[2],-20000000, 20000000);
+				if (f==0)error("frequency cannot be 0");
 		do {
 			prescale++;
 			counts = round(
 					(MMFLOAT) SystemCoreClock / (channel==2 ? (MMFLOAT) 1.0 : (MMFLOAT) 2.0) / (MMFLOAT) prescale
-							/ (MMFLOAT) f);
+							/ (MMFLOAT) abs(f));
 		} while (counts > 65535);
 		counts--;
 		prescale--;
@@ -104,7 +106,7 @@ void cmd_pwm(void) {
 			else {
 				duty = getnumber(argv[j]);
 				if (duty < 0.0 || duty > 100.0)
-					error("Number out of bounds");
+					StandardError(11);//error("Number out of bounds");
 				dcy[channel][i] = duty * 100.0;
 				if (duty == 100.0)
 					dcy[channel][i] = 10100;
@@ -114,6 +116,7 @@ void cmd_pwm(void) {
 	} else {
 		// Command must be SERVO
 		f = getinteger(argv[2]);
+		if (f<0)error("OC not supported for SERVO");
 		if (f >= 20) { //must be a frequency
 			if (f > 1000)
 				error("% out of bounds", f);
@@ -138,11 +141,11 @@ void cmd_pwm(void) {
 			else {
 				MMFLOAT ontime = getnumber(argv[j]);
 				if (ontime < 0.01 || ontime > 18.9)
-					error("Number out of bounds");
+					StandardError(11);//error("Number out of bounds");
 				a = ((MMFLOAT) 1.0) / ((MMFLOAT) f) * ((MMFLOAT) 1000.0);
 				duty = ontime / a * ((MMFLOAT) 100.0);
 				if (duty > 99.9)
-					error("Number out of bounds");
+					StandardError(11);//error("Number out of bounds");
 				dcy[channel][i] = duty * 100.0;
 				dcy[channel][i] = (counts * dcy[channel][i]) / 10000;
 			}
@@ -156,25 +159,24 @@ void cmd_pwm(void) {
 		htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 		htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 		if (HAL_TIM_Base_Init(&htim3) != HAL_OK) {
-			error("HAL_TIM_Base_Init(&htim3)");
+			StandardError(36);//HAL_TIM_Base_Init;
 		}
 
 		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 		if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK) {
-			error("HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig)");
+			StandardError(35);//HAL_TIM_ConfigClockSource;
 		}
 
 		if (HAL_TIM_PWM_Init(&htim3) != HAL_OK) {
-			error("HAL_TIM_PWM_Init(&htim3)");
+			StandardError(32);//HAL_TIM_PWM_Init;
 		}
 
 		sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 		sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-		if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig)
-				!= HAL_OK) {
-			error(
-					"HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig)");
+		if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig)!= HAL_OK) {
+			StandardError(37);//HAL_TIMEx_MasterConfigSynchronization;
 		}
+		f1=f;
 	} else if (channel == 1 && f != f2) {
 		htim4.Instance = TIM4;
 		htim4.Init.Prescaler = prescale;
@@ -183,20 +185,21 @@ void cmd_pwm(void) {
 		htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 		htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 		if (HAL_TIM_Base_Init(&htim4) != HAL_OK) {
-			error("HAL_TIM_Base_Init(&htim4)");
+			StandardError(36);//HAL_TIM_Base_Init;
 		}
 
 		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 		if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK) {
-			error("HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig)");
+			StandardError(35);//HAL_TIM_ConfigClockSource;
 		}
 
 		if (HAL_TIM_PWM_Init(&htim4) != HAL_OK) {
-			error("HAL_TIM_PWM_Init(&htim4)");
+			StandardError(32);//HAL_TIM_PWM_Init;
 		}
 
 		sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 		sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+		f2=f;
 	} else if (channel == 2 && f != f3) {
 		htim9.Instance = TIM9;
 		htim9.Init.Prescaler = prescale;
@@ -205,20 +208,21 @@ void cmd_pwm(void) {
 		htim9.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 		htim9.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 		if (HAL_TIM_Base_Init(&htim9) != HAL_OK) {
-			error("HAL_TIM_Base_Init(&htim9)");
+			StandardError(36);//HAL_TIM_Base_Init;
 		}
 
 		sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
 		if (HAL_TIM_ConfigClockSource(&htim9, &sClockSourceConfig) != HAL_OK) {
-			error("HAL_TIM_ConfigClockSource(&htim9, &sClockSourceConfig)");
+			StandardError(35);//HAL_TIM_ConfigClockSource;
 		}
 
 		if (HAL_TIM_PWM_Init(&htim9) != HAL_OK) {
-			error("HAL_TIM_PWM_Init(&htim9)");
+			StandardError(32);//HAL_TIM_PWM_Init;
 		}
 
 		sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 		sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+		f3=f;
 	}
 
 	// this is channel 1
@@ -233,10 +237,15 @@ void cmd_pwm(void) {
 			sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 			if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_1)
 					!= HAL_OK) {
-				error("HAL_TIM_PWM_ConfigChannel");
+				StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 			}
 			GPIO_InitStruct.Pin = PWM_1A_Pin;
-			GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+			if (f<0){
+				//testing to allow config for Open Drain.
+			    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+			}else{
+			   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+			}
 			GPIO_InitStruct.Pull = GPIO_NOPULL;
 			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 			GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
@@ -245,7 +254,7 @@ void cmd_pwm(void) {
 			/* Start channel 1 */
 			if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1) != HAL_OK) {
 				/* PWM Generation Error */
-				error("HAL_TIM_PWM_Start");
+				StandardError(33);//HAL_TIM_PWM_Start;
 			}
 			f1 = f;
 			oc1 = true;
@@ -265,10 +274,15 @@ void cmd_pwm(void) {
 				sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 				if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_2)
 						!= HAL_OK) {
-					error("HAL_TIM_PWM_ConfigChannel");
+					StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 				}
 				GPIO_InitStruct.Pin = PWM_1B_Pin;
-				GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				if (f<0){
+					//testing to allow config for Open Drain.
+				    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+				}else{
+				   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				}
 				GPIO_InitStruct.Pull = GPIO_NOPULL;
 				GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 				GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
@@ -276,7 +290,7 @@ void cmd_pwm(void) {
 				/* Start channel 1 */
 				if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_2) != HAL_OK) {
 					/* PWM Generation Error */
-					error("HAL_TIM_PWM_Start");
+					StandardError(33);//HAL_TIM_PWM_Start;
 				}
 				oc2 = true;
 			} else
@@ -293,10 +307,15 @@ void cmd_pwm(void) {
 				sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 				if (HAL_TIM_PWM_ConfigChannel(&htim3, &sConfigOC, TIM_CHANNEL_3)
 						!= HAL_OK) {
-					error("HAL_TIM_PWM_ConfigChannel");
+					StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 				}
 				GPIO_InitStruct.Pin = PWM_1C_F_CS_Pin;
-				GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				if (f<0){
+					//testing to allow config for Open Drain.
+				    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+				}else{
+				   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				}
 				GPIO_InitStruct.Pull = GPIO_NOPULL;
 				GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 				GPIO_InitStruct.Alternate = GPIO_AF2_TIM3;
@@ -304,7 +323,7 @@ void cmd_pwm(void) {
 				/* Start channel 1 */
 				if (HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_3) != HAL_OK) {
 					/* PWM Generation Error */
-					error("HAL_TIM_PWM_Start");
+					StandardError(33);//HAL_TIM_PWM_Start;
 				}
 				oc3 = true;
 			} else
@@ -321,10 +340,15 @@ void cmd_pwm(void) {
 			sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 			if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_1)
 					!= HAL_OK) {
-				error("HAL_TIM_PWM_ConfigChannel");
+				StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 			}
 			GPIO_InitStruct.Pin = PWM_2A_Pin;
-			GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+			if (f<0){
+				//testing to allow config for Open Drain.
+			    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+			}else{
+			   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+			}
 			GPIO_InitStruct.Pull = GPIO_NOPULL;
 			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 			GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
@@ -332,7 +356,7 @@ void cmd_pwm(void) {
 			/* Start channel 1 */
 			if (HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1) != HAL_OK) {
 				/* PWM Generation Error */
-				error("HAL_TIM_PWM_Start");
+				StandardError(33);//HAL_TIM_PWM_Start;
 			}
 			f2 = f;
 			oc6 = oc7 = false;
@@ -350,10 +374,15 @@ void cmd_pwm(void) {
 				sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 				if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_3)
 						!= HAL_OK) {
-					error("HAL_TIM_PWM_ConfigChannel");
+					StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 				}
 				GPIO_InitStruct.Pin = PWM_2B_NRF_IRQ_Pin;
-				GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				if (f<0){
+					//testing to allow config for Open Drain.
+				    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+				}else{
+				   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				}
 				GPIO_InitStruct.Pull = GPIO_NOPULL;
 				GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 				GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
@@ -361,7 +390,7 @@ void cmd_pwm(void) {
 				/* Start channel 1 */
 				if (HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_3) != HAL_OK) {
 					/* PWM Generation Error */
-					error("HAL_TIM_PWM_Start");
+					StandardError(33);//HAL_TIM_PWM_Start;
 				}
 				oc6 = true;
 			} else
@@ -377,10 +406,15 @@ void cmd_pwm(void) {
 				sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 				if (HAL_TIM_PWM_ConfigChannel(&htim4, &sConfigOC, TIM_CHANNEL_4)
 						!= HAL_OK) {
-					error("HAL_TIM_PWM_ConfigChannel");
+					StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 				}
 				GPIO_InitStruct.Pin = PWM_2C_Pin;
-				GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				if (f<0){
+					//testing to allow config for Open Drain.
+				    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+				}else{
+				   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				}
 				GPIO_InitStruct.Pull = GPIO_NOPULL;
 				GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 				GPIO_InitStruct.Alternate = GPIO_AF2_TIM4;
@@ -388,7 +422,7 @@ void cmd_pwm(void) {
 				/* Start channel 1 */
 				if (HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_4) != HAL_OK) {
 					/* PWM Generation Error */
-					error("HAL_TIM_PWM_Start");
+					StandardError(33);//HAL_TIM_PWM_Start;
 				}
 				oc7 = true;
 			} else
@@ -405,10 +439,15 @@ void cmd_pwm(void) {
 			sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 			if (HAL_TIM_PWM_ConfigChannel(&htim9, &sConfigOC, TIM_CHANNEL_1)
 					!= HAL_OK) {
-				error("HAL_TIM_PWM_ConfigChannel");
+				StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 			}
 			GPIO_InitStruct.Pin = PWM_3A_Pin;
-			GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+			if (f<0){
+				//testing to allow config for Open Drain.
+			    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+			}else{
+			   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+			}
 			GPIO_InitStruct.Pull = GPIO_NOPULL;
 			GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 			GPIO_InitStruct.Alternate = GPIO_AF3_TIM9;
@@ -416,7 +455,7 @@ void cmd_pwm(void) {
 			/* Start channel 1 */
 			if (HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_1) != HAL_OK) {
 				/* PWM Generation Error */
-				error("HAL_TIM_PWM_Start");
+				StandardError(33);//HAL_TIM_PWM_Start;
 			}
 			f3 = f;
 			oc9 = false;
@@ -434,10 +473,15 @@ void cmd_pwm(void) {
 				sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
 				if (HAL_TIM_PWM_ConfigChannel(&htim9, &sConfigOC, TIM_CHANNEL_2)
 						!= HAL_OK) {
-					error("HAL_TIM_PWM_ConfigChannel");
+					StandardError(34);//HAL_TIM_PWM_ConfigChannel;
 				}
 				GPIO_InitStruct.Pin = PWM_3B_Pin;
-				GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				if (f<0){
+					//testing to allow config for Open Drain.
+				    GPIO_InitStruct.Mode = GPIO_MODE_AF_OD; //'OPEN DRAIN
+				}else{
+				   GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+				}
 				GPIO_InitStruct.Pull = GPIO_NOPULL;
 				GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 				GPIO_InitStruct.Alternate = GPIO_AF3_TIM9;
@@ -445,7 +489,7 @@ void cmd_pwm(void) {
 				/* Start channel 1 */
 				if (HAL_TIM_PWM_Start(&htim9, TIM_CHANNEL_2) != HAL_OK) {
 					/* PWM Generation Error */
-					error("HAL_TIM_PWM_Start");
+					StandardError(33);//HAL_TIM_PWM_Start;
 				}
 				oc9 = true;
 			} else

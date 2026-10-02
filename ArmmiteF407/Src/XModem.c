@@ -65,7 +65,7 @@ void cmd_xmodem(void) {
     else if(toupper(*cmdline) == 'C')
          crunch = rcv = true;
     else
-        error("Syntax");
+        SyntaxError();
     while(IsAlpha(*cmdline)) cmdline++ ;                           // find the filename (if it is there)
     skipspace(cmdline);
 
@@ -74,7 +74,7 @@ void cmd_xmodem(void) {
         
     if(*cmdline == 0 || *cmdline == '\'') {
         // no file name, so this is a transfer to/from program memory
-        if(CurrentLinePtr) error("Invalid in a program");
+        if(CurrentLinePtr) StandardError(23);//Invalid in a program;
         ClearProgram();                                             // we need all the RAM
         buf = GetTempMemory(EDIT_BUFFER_SIZE);
         if(rcv) {
@@ -88,7 +88,7 @@ void cmd_xmodem(void) {
                 if(*fromp == T_NEWLINE) {
                     fromp = llist(p, fromp);                        // expand the line into the buffer
                     p += strlen(p);
-                    if(p - buf + 40 > EDIT_BUFFER_SIZE) error("Not enough memory");
+                    if(p - buf + 40 > EDIT_BUFFER_SIZE) StandardError(24);//Not enough memory;
                     *p++ = '\n'; *p = 0;                            // terminate that line
                 }
                 if(fromp[0] == 0 || fromp[0] == 0xff) break;        // finally, is it the end of the program?
@@ -205,7 +205,7 @@ void xmodemReceive(char *sp, int maxbytes, int fnbr, int crunch) {
                     flushinput();
                     putConsole(ACK);
                     if(sp != NULL) {
-                        if(maxbytes <= 0) error("Not enough memory");
+                        if(maxbytes <= 0) StandardError(24);//Not enough memory;
                         *sp++ = 0;                                  // terminate the data
                     }
                     return;                                         // no more data

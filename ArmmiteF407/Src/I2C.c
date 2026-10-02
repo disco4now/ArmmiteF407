@@ -82,7 +82,7 @@ void cmd_i2c(void) {
     else if((p = checkstring(cmdline, "CHECK")) != NULL)
         i2cCheck(p);
     else
-        error("Unknown command");
+        StandardError(7);//error("Unknown command");
 }
 void cmd_i2c2(void) {
     char *p;//, *pp;
@@ -98,7 +98,7 @@ void cmd_i2c2(void) {
     else if((p = checkstring(cmdline, "CHECK")) != NULL)
         i2c2Check(p);
     else
-        error("Unknown command");
+        StandardError(7);//error("Unknown command");
 }
 /*
  * *Initialize RTC and set the Time and Date
@@ -143,7 +143,7 @@ void RtcGetTime(void){
 void i2cEnable(char *p) {
 	int speed, timeout;
 	getargs(&p, 3, ",");
-	if(argc != 3) error("Invalid syntax");
+	if(argc != 3) SyntaxError();//error("Invalid syntax");
 	speed = getinteger(argv[0]);
 	if(!(speed ==100 || speed == 400)) error("Valid speeds 100, 400");
 	timeout = getinteger(argv[2]);
@@ -157,7 +157,7 @@ void i2cEnable(char *p) {
 void i2c2Enable(char *p) {
 	int speed, timeout;
 	getargs(&p, 3, ",");
-	if(argc != 3) error("Invalid syntax");
+	if(argc != 3) SyntaxError();//error("Invalid syntax");
 	speed = getinteger(argv[0]);
 	if(!(speed ==100 || speed == 400)) error("Valid speeds 100, 400");
 	timeout = getinteger(argv[2]);
@@ -186,16 +186,16 @@ void i2cSend(char *p) {
 	unsigned char *cptr = NULL;
 
 	getargs(&p, 99, ",");
-	if(!(argc & 0x01) || (argc < 7)) error("Invalid syntax");
+	if(!(argc & 0x01) || (argc < 7)) SyntaxError();//error("Invalid syntax");
 	if(!I2C_enabled)error("I2C not open");
 	addr = getinteger(argv[0]);
 	i2c_options = getinteger(argv[2]);
-	if(i2c_options < 0 || i2c_options > 3) error("Number out of bounds");
+	if(i2c_options < 0 || i2c_options > 3) StandardError(11);//error("Number out of bounds");
 	I2C_Status = 0;
 	if(i2c_options & 0x01) I2C_Status = I2C_Status_BusHold;
 	I2C_Addr = addr;
 	sendlen = getinteger(argv[4]);
-	if(sendlen < 1 || sendlen > 255) error("Number out of bounds");
+	if(sendlen < 1 || sendlen > 255) StandardError(11);//error("Number out of bounds");
 
 	if(sendlen == 1 || argc > 7) {		// numeric expressions for data
 		if(sendlen != ((argc - 5) >> 1)) error("Incorrect argument count");
@@ -204,7 +204,7 @@ void i2cSend(char *p) {
 		}
 	} else {		// an array of MMFLOAT, integer or a string
 		ptr = findvar(argv[6], V_NOFIND_NULL | V_EMPTY_OK);
-		if(ptr == NULL) error("Invalid variable");
+		if(ptr == NULL)  StandardError(3);//error("Invalid variable");
 		if((vartbl[VarIndex].type & T_STR) && vartbl[VarIndex].dims[0] == 0) {		// string
 			cptr = (unsigned char *)ptr;
 			cptr++;																	// skip the length byte in a MMBasic string
@@ -227,7 +227,7 @@ void i2cSend(char *p) {
 					I2C_Send_Buffer[i] = (int)(*((long long int *)ptr + i));
 				}
 			}
-		} else error("Invalid variable");
+		} else  StandardError(3);//error("Invalid variable");
 	}
 	I2C_Sendlen = sendlen;
 	I2C_Rcvlen = 0;
@@ -241,16 +241,16 @@ void i2c2Send(char *p) {
 	unsigned char *cptr = NULL;
 
 	getargs(&p, 99, ",");
-	if(!(argc & 0x01) || (argc < 7)) error("Invalid syntax");
+	if(!(argc & 0x01) || (argc < 7)) SyntaxError();//error("Invalid syntax");
 	if(!I2C2_enabled)error("I2C not open");
 	addr = getinteger(argv[0]);
 	i2c2_options = getinteger(argv[2]);
-	if(i2c2_options < 0 || i2c2_options > 3) error("Number out of bounds");
+	if(i2c2_options < 0 || i2c2_options > 3) StandardError(11);//error("Number out of bounds");
 	I2C2_Status = 0;
 	if(i2c2_options & 0x01) I2C2_Status = I2C_Status_BusHold;
 	I2C2_Addr = addr;
 	sendlen = getinteger(argv[4]);
-	if(sendlen < 1 || sendlen > 255) error("Number out of bounds");
+	if(sendlen < 1 || sendlen > 255) StandardError(11);//error("Number out of bounds");
 
 	if(sendlen == 1 || argc > 7) {		// numeric expressions for data
 		if(sendlen != ((argc - 5) >> 1)) error("Incorrect argument count");
@@ -259,7 +259,7 @@ void i2c2Send(char *p) {
 		}
 	} else {		// an array of MMFLOAT, integer or a string
 		ptr = findvar(argv[6], V_NOFIND_NULL | V_EMPTY_OK);
-		if(ptr == NULL) error("Invalid variable");
+		if(ptr == NULL)  StandardError(3);//error("Invalid variable");
 		if((vartbl[VarIndex].type & T_STR) && vartbl[VarIndex].dims[0] == 0) {		// string
 			cptr = (unsigned char *)ptr;
 			cptr++;																	// skip the length byte in a MMBasic string
@@ -282,7 +282,7 @@ void i2c2Send(char *p) {
 					I2C2_Send_Buffer[i] = (int)(*((long long int *)ptr + i));
 				}
 			}
-		} else error("Invalid variable");
+		} else  StandardError(3);//error("Invalid variable");
 	}
 	I2C2_Sendlen = sendlen;
 	I2C2_Rcvlen = 0;
@@ -313,33 +313,33 @@ void i2cReceive(char *p) {
 	int addr, i2c_options, rcvlen;
 	void *ptr = NULL;
 	getargs(&p, 7, ",");
-	if(argc != 7) error("Invalid syntax");
+	if(argc != 7) SyntaxError();//error("Invalid syntax");
 	if(!I2C_enabled)error("I2C not open");
 	addr = getinteger(argv[0]);
 	i2c_options = getinteger(argv[2]);
-	if(i2c_options < 0 || i2c_options > 3) error("Number out of bounds");
+	if(i2c_options < 0 || i2c_options > 3) StandardError(11);//error("Number out of bounds");
 	I2C_Status = 0;
 	if(i2c_options & 0x01) I2C_Status = I2C_Status_BusHold;
 	I2C_Addr = addr;
 	rcvlen = getinteger(argv[4]);
-	if(rcvlen < 1 || rcvlen > 255) error("Number out of bounds");
+	if(rcvlen < 1 || rcvlen > 255) StandardError(11);//error("Number out of bounds");
 
 	ptr = findvar(argv[6], V_FIND | V_EMPTY_OK);
-    if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
-	if(ptr == NULL) error("Invalid variable");
+    if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
+	if(ptr == NULL)  StandardError(3);//error("Invalid variable");
 	if(vartbl[VarIndex].type & T_NBR) {
-        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
         if(vartbl[VarIndex].dims[0] <= 0) {		// Not an array
-            if(rcvlen != 1) error("Invalid variable");
+            if(rcvlen != 1)  StandardError(3);//error("Invalid variable");
         } else {		// An array
             if( (((MMFLOAT *)ptr - vartbl[VarIndex].val.fa) + rcvlen) > (vartbl[VarIndex].dims[0] + 1 - OptionBase) )
                 error("Insufficient space in array");
         }
         I2C_Rcvbuf_Float = (MMFLOAT*)ptr;
     } else if(vartbl[VarIndex].type & T_INT) {
-        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
         if(vartbl[VarIndex].dims[0] <= 0) {		// Not an array
-            if(rcvlen != 1) error("Invalid variable");
+            if(rcvlen != 1)  StandardError(3);//error("Invalid variable");
         } else {		// An array
             if( (((long long int *)ptr - vartbl[VarIndex].val.ia) + rcvlen) > (vartbl[VarIndex].dims[0] + 1 - OptionBase) )
                 error("Insufficient space in array");
@@ -347,12 +347,12 @@ void i2cReceive(char *p) {
         I2C_Rcvbuf_Int = (long long int *)ptr;
         I2C_Rcvbuf_Float = NULL;
     } else if(vartbl[VarIndex].type & T_STR) {
-        if(vartbl[VarIndex].dims[0] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[0] != 0)  StandardError(3);//error("Invalid variable");
         *(char *)ptr = rcvlen;
         I2C_Rcvbuf_String = (char *)ptr + 1;
         I2C_Rcvbuf_Float = NULL;
         I2C_Rcvbuf_Int = NULL;
-    } else error("Invalid variable");
+    } else  StandardError(3);//error("Invalid variable");
 	I2C_Rcvlen = rcvlen;
 
 	I2C_Sendlen = 0;
@@ -364,33 +364,33 @@ void i2c2Receive(char *p) {
 	int addr, i2c2_options, rcvlen;
 	void *ptr = NULL;
 	getargs(&p, 7, ",");
-	if(argc != 7) error("Invalid syntax");
+	if(argc != 7) SyntaxError();//error("Invalid syntax");
 	if(!I2C2_enabled)error("I2C not open");
 	addr = getinteger(argv[0]);
 	i2c2_options = getinteger(argv[2]);
-	if(i2c2_options < 0 || i2c2_options > 3) error("Number out of bounds");
+	if(i2c2_options < 0 || i2c2_options > 3) StandardError(11);//error("Number out of bounds");
 	I2C2_Status = 0;
 	if(i2c2_options & 0x01) I2C2_Status = I2C_Status_BusHold;
 	I2C2_Addr = addr;
 	rcvlen = getinteger(argv[4]);
-	if(rcvlen < 1 || rcvlen > 255) error("Number out of bounds");
+	if(rcvlen < 1 || rcvlen > 255) StandardError(11);//error("Number out of bounds");
 
 	ptr = findvar(argv[6], V_FIND | V_EMPTY_OK);
-    if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
-	if(ptr == NULL) error("Invalid variable");
+    if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
+	if(ptr == NULL)  StandardError(3);//error("Invalid variable");
 	if(vartbl[VarIndex].type & T_NBR) {
         if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
         if(vartbl[VarIndex].dims[0] <= 0) {		// Not an array
-            if(rcvlen != 1) error("Invalid variable");
+            if(rcvlen != 1)  StandardError(3);//error("Invalid variable");
         } else {		// An array
             if( (((MMFLOAT *)ptr - vartbl[VarIndex].val.fa) + rcvlen) > (vartbl[VarIndex].dims[0] + 1 - OptionBase) )
                 error("Insufficient space in array");
         }
         I2C2_Rcvbuf_Float = (MMFLOAT*)ptr;
     } else if(vartbl[VarIndex].type & T_INT) {
-        if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
         if(vartbl[VarIndex].dims[0] <= 0) {		// Not an array
-            if(rcvlen != 1) error("Invalid variable");
+            if(rcvlen != 1)  StandardError(3);//error("Invalid variable");
         } else {		// An array
             if( (((long long int *)ptr - vartbl[VarIndex].val.ia) + rcvlen) > (vartbl[VarIndex].dims[0] + 1 - OptionBase) )
                 error("Insufficient space in array");
@@ -398,12 +398,12 @@ void i2c2Receive(char *p) {
         I2C2_Rcvbuf_Int = (long long int *)ptr;
         I2C2_Rcvbuf_Float = NULL;
     } else if(vartbl[VarIndex].type & T_STR) {
-        if(vartbl[VarIndex].dims[0] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].dims[0] != 0)  StandardError(3);//error("Invalid variable");
         *(char *)ptr = rcvlen;
         I2C2_Rcvbuf_String = (char *)ptr + 1;
         I2C2_Rcvbuf_Float = NULL;
         I2C2_Rcvbuf_Int = NULL;
-    } else error("Invalid variable");
+    } else  StandardError(3);//error("Invalid variable");
 	I2C2_Rcvlen = rcvlen;
 
 	I2C2_Sendlen = 0;

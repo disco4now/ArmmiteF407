@@ -70,7 +70,7 @@ void cmd_open(void) {
 	ss[3] = 0;
 	{																// start a new block
 		getargs(&cmdline, 7, ss);									// getargs macro must be the first executable stmt in a block
-        if(!(argc == 3 || argc == 5 || argc == 7)) error("Syntax");
+        if(!(argc == 3 || argc == 5 || argc == 7)) SyntaxError();
 		fname = getFstring(argv[0]);
 
 		// check that it is a serial port that we are opening
@@ -83,9 +83,9 @@ void cmd_open(void) {
         if((*argv[2] == 'G') || (*argv[2] == 'g')){
             MMFLOAT timeadjust=0.0;
             argv[2]++;
-            if(!((*argv[2] == 'P') || (*argv[2] == 'p')))error("Syntax");
+            if(!((*argv[2] == 'P') || (*argv[2] == 'p')))SyntaxError();
             argv[2]++;
-            if(!((*argv[2] == 'S') || (*argv[2] == 's')))error("Syntax");
+            if(!((*argv[2] == 'S') || (*argv[2] == 's')))SyntaxError();
             if(argc >= 5)timeadjust=getnumber(argv[4]);
             if(timeadjust<-12.0 || timeadjust>14.0)error("Invalid Time Offset");
             gpsmonitor=0;
@@ -106,7 +106,7 @@ void cmd_open(void) {
         } else {
             if(*argv[2] == '#') argv[2]++;
             fnbr = getint(argv[2], 1, MAXOPENFILES);
-            if(FileTable[fnbr].com != 0) error("Already open");
+            if(FileTable[fnbr].com != 0) StandardError(14);//error("Already open");
             SerialOpen(fname);
             FileTable[fnbr].com = fname[3] - '0';
         }
@@ -118,13 +118,13 @@ void cmd_open(void) {
 void cmd_close(void) {
 	int i, fnbr;
 	getargs(&cmdline, (MAX_ARG_COUNT * 2) - 1,",");				// getargscomma macro must be the first executable stmt in a block
-	if((argc & 0x01) == 0) error("Syntax");
+	if((argc & 0x01) == 0) SyntaxError();
 	for(i = 0; i < argc; i += 2) {
         if((*argv[i] == 'G') || (*argv[i] == 'g')){
             argv[i]++;
-            if(!((*argv[i] == 'P') || (*argv[i] == 'p')))error("Syntax");
+            if(!((*argv[i] == 'P') || (*argv[i] == 'p')))SyntaxError();
             argv[i]++;
-            if(!((*argv[i] == 'S') || (*argv[i] == 's')))error("Syntax");
+            if(!((*argv[i] == 'S') || (*argv[i] == 's')))SyntaxError();
             if(!GPSfnbr)error("Not open");
             SerialClose(FileTable[GPSfnbr].com);
             FileTable[GPSfnbr].com = 0;
@@ -146,7 +146,7 @@ void cmd_close(void) {
         } else {
 		if(*argv[i] == '#') argv[i]++;
 		fnbr = getint(argv[i], 1, MAXOPENFILES);
-        if(FileTable[fnbr].com == 0) error("File number is not open");
+        if(FileTable[fnbr].com == 0) StandardError(9);//error("File number is not open");
         if(FileTable[fnbr].com > MAXCOMPORTS) FileClose(fnbr);
         else while(SerialTxStatus(FileTable[fnbr].com) && !MMAbort){};     // wait for anything in the buffer to be transmitted
             SerialClose(FileTable[fnbr].com);
@@ -160,7 +160,7 @@ void cmd_close(void) {
 void fun_inputstr(void) {
 	int i, nbr, fnbr;
 	getargs(&ep, 3, ",");
-	if(argc != 3) error("Syntax");
+	if(argc != 3) SyntaxError();
 	sret = GetTempStrMemory();                                      // this will last for the life of the command
 	nbr = getint(argv[0], 1, MAXSTRLEN);
 	if(*argv[2] == '#') argv[2]++;
@@ -169,8 +169,8 @@ void fun_inputstr(void) {
         for(i = 1; i <= nbr && kbhitConsole(); i++)
             sret[i] = getConsole();                                 // get the char from the console input buffer and save in our returned string
     } else {
-        if(fnbr < 1 || fnbr > MAXOPENFILES) error("File number");
-        if(FileTable[fnbr].com == 0) error("File number is not open");
+        if(fnbr < 1 || fnbr > MAXOPENFILES) StandardError(8);//error("File number");
+        if(FileTable[fnbr].com == 0) StandardError(9);//error("File number is not open");
         targ = T_STR;
         if(FileTable[fnbr].com > MAXCOMPORTS) {
             for(i = 1; i <= nbr && !MMfeof(fnbr); i++)
@@ -189,7 +189,7 @@ void fun_inputstr(void) {
 void fun_eof(void) {
     int fnbr;
 	getargs(&ep, 1, ",");
-	if(argc == 0) error("Syntax");
+	if(argc == 0) SyntaxError();
 	if(*argv[0] == '#') argv[0]++;
 	fnbr = getinteger(argv[0]);
     iret = MMfeof(fnbr);
@@ -202,14 +202,14 @@ void fun_eof(void) {
 void fun_loc(void) {
 	int fnbr;
 	getargs(&ep, 1, ",");
-	if(argc == 0) error("Syntax");
+	if(argc == 0) SyntaxError();
 	if(*argv[0] == '#') argv[0]++;
 	fnbr = getinteger(argv[0]);
     if(fnbr == 0)                                                   // accessing the console
         iret = kbhitConsole();
     else {
-        if(fnbr < 1 || fnbr > MAXOPENFILES) error("File number");
-        if(FileTable[fnbr].com == 0) error("File number is not open");
+        if(fnbr < 1 || fnbr > MAXOPENFILES) StandardError(8);//error("File number");
+        if(FileTable[fnbr].com == 0) StandardError(9);//error("File number is not open");
         if(FileTable[fnbr].com > MAXCOMPORTS) {
             iret = (*(FileTable[fnbr].fptr)).fptr + 1;
         } else
@@ -222,14 +222,14 @@ void fun_loc(void) {
 void fun_lof(void) {
 	int fnbr;
 	getargs(&ep, 1, ",");
-	if(argc == 0) error("Syntax");
+	if(argc == 0) SyntaxError();
 	if(*argv[0] == '#') argv[0]++;
 	fnbr = getinteger(argv[0]);
     if(fnbr == 0)                                                   // accessing the console
         iret = 0;
     else {
-        if(fnbr < 1 || fnbr > MAXOPENFILES) error("File number");
-        if(FileTable[fnbr].com == 0) error("File number is not open");
+        if(fnbr < 1 || fnbr > MAXOPENFILES) StandardError(8);//error("File number");
+        if(FileTable[fnbr].com == 0) StandardError(9);//error("File number is not open");
         if(FileTable[fnbr].com > MAXCOMPORTS) {
             iret = f_size(FileTable[fnbr].fptr);
         } else
@@ -328,8 +328,8 @@ void MMgetline(int filenbr, char *p) {
 int MMfgetc(int fnbr) {
 	int ch;
 	if(fnbr == 0) return MMgetchar();                               // accessing the console
-    if(fnbr < 1 || fnbr > MAXOPENFILES) error("File number");
-    if(FileTable[fnbr].com == 0) error("File number is not open");
+    if(fnbr < 1 || fnbr > MAXOPENFILES) StandardError(8);//error("File number");
+    if(FileTable[fnbr].com == 0) StandardError(9);//error("File number is not open");
     if(FileTable[fnbr].com > MAXCOMPORTS)
         ch = FileGetChar(fnbr);
     else
@@ -344,8 +344,8 @@ int MMfgetc(int fnbr) {
 // otherwise the COM port or file opened as #fnbr
 char MMfputc(char c, int fnbr) {
 	if(fnbr == 0) return MMputchar(c);                              // accessing the console
-    if(fnbr < 1 || fnbr > MAXOPENFILES) error("File number");
-    if(FileTable[fnbr].com == 0) error("File number is not open");
+    if(fnbr < 1 || fnbr > MAXOPENFILES) StandardError(8);//error("File number");
+    if(FileTable[fnbr].com == 0) StandardError(9);//error("File number is not open");
     if(FileTable[fnbr].com > MAXCOMPORTS)
         return FilePutChar(c, fnbr);
     else
@@ -356,8 +356,8 @@ char MMfputc(char c, int fnbr) {
 
 int MMfeof(int fnbr) {
 	if(fnbr == 0) return (kbhitConsole() == 0);                     // accessing the console
-    if(fnbr < 1 || fnbr > MAXOPENFILES) error("File number");
-    if(FileTable[fnbr].com == 0) error("File number is not open");
+    if(fnbr < 1 || fnbr > MAXOPENFILES) StandardError(8);//error("File number");
+    if(FileTable[fnbr].com == 0) StandardError(9);//error("File number is not open");
     if(FileTable[fnbr].com > MAXCOMPORTS)
         return FileEOF(fnbr);
     else

@@ -185,7 +185,7 @@ void fun_field(void) {
 	char *p, *delims = "\1,", *quotes = "\0";
     int fnbr, i, j, k;
 	getargs(&ep, 7,",");
-	if(!(argc == 3 || argc == 5 || argc == 7)) error("Syntax");
+	if(!(argc == 3 || argc == 5 || argc == 7)) SyntaxError();
     p = getstring(argv[0]);                                         // the string containing the fields
     fnbr = getint(argv[2], 1, MAXSTRLEN);                           // field nbr to return
     if(argc > 3 && *argv[4]) delims = getstring(argv[4]);           // delimiters for fields
@@ -221,8 +221,8 @@ void fun_str2bin(void){
     }map;
     int j;
 	getargs(&ep, 5,",");
-	if(!(argc==3 || argc==5))error("Syntax");
-	if(argc==5 && !checkstring(argv[4],"BIG"))error("Syntax");
+	if(!(argc==3 || argc==5))SyntaxError();
+	if(argc==5 && !checkstring(argv[4],"BIG"))SyntaxError();
 	char *p;
 	p = getstring(argv[2]);
 	int len=p[0];
@@ -239,46 +239,46 @@ void fun_str2bin(void){
     	}
     }
     if(checkstring(argv[0],"DOUBLE")){
-        if(len!=8)error("String length");
+        if(len!=8)StandardError(12);//error("String length");
 	targ=T_NBR;
 	fret=(MMFLOAT)map.d;
     } else if(checkstring(argv[0],"SINGLE")){
-        if(len!=4)error("String length");
+        if(len!=4)StandardError(12);//error("String length");
 	targ=T_NBR;
 	fret=(MMFLOAT)map.f;
     } else if(checkstring(argv[0],"INT64")){
-        if(len!=8)error("String length");
+        if(len!=8)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.l;
     } else if( checkstring(argv[0],"INT32")){
-        if(len!=4)error("String length");
+        if(len!=4)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.i;
     } else if(checkstring(argv[0],"INT16")){
-        if(len!=2)error("String length");
+        if(len!=2)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.s;
     } else if(checkstring(argv[0],"INT8")){
-        if(len!=1)error("String length");
+        if(len!=1)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.c[0];
     } else if(checkstring(argv[0],"UINT64")){
-        if(len!=8)error("String length");
+        if(len!=8)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.ul;
     } else if(checkstring(argv[0],"UINT32")){
-        if(len!=4)error("String length");
+        if(len!=4)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.ui;
     } else if(checkstring(argv[0],"UINT16")){
-        if(len!=2)error("String length");
+        if(len!=2)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.us;
     } else if(checkstring(argv[0],"UINT8")){
-        if(len!=1)error("String length");
+        if(len!=1)StandardError(12);//error("String length");
     	targ=T_INT;
     	iret=(int64_t)map.uc[0];
-    } else error("Syntax");
+    } else SyntaxError();
 
 }
 
@@ -299,8 +299,8 @@ void fun_bin2str(void){
     }map;
     int64_t i64;
 	getargs(&ep, 5,",");
-	if(!(argc==3 || argc==5))error("Syntax");
-    if(argc==5 && !(checkstring(argv[4],"BIG")))error("Syntax");
+	if(!(argc==3 || argc==5))SyntaxError();
+    if(argc==5 && !(checkstring(argv[4],"BIG")))SyntaxError();
 	sret = GetTempStrMemory();									// this will last for the life of the command
     if(checkstring(argv[0],"DOUBLE")){
 		len=8;
@@ -340,7 +340,7 @@ void fun_bin2str(void){
     		len=1;
     		if(i64 > 255 || i64 < 0)error("Overflow");
     		map.uc[0]=(uint8_t)i64;
-    	} else error("Syntax");
+    	} else SyntaxError();
     }
 
 
@@ -409,7 +409,7 @@ void fun_atn(void) {
 void fun_atan2(void) {
     MMFLOAT y,x,z;
     getargs(&ep, 3,",");
-    if(argc != 3)error("Syntax");
+    if(argc != 3)SyntaxError();
     y=getnumber(argv[0]);
     x=getnumber(argv[2]);
     z=atan2(y,x);
@@ -520,7 +520,7 @@ void fun_instr(void) {
 		s2 = getstring(argv[2]);
 	}
 	else
-		error("Argument count");
+		StandardError(2);//error("Argument count");
 
     targ = T_INT;
 	if(start > *s1 - *s2 + 1 || *s2 == 0)
@@ -565,7 +565,7 @@ void fun_left(void) {
     char *s;
 	getargs(&ep, 3, ",");
 
-	if(argc != 3) error("Argument count");
+	if(argc != 3) StandardError(2);//error("Argument count");
 	s = GetTempStrMemory();                                         // this will last for the life of the command
 	Mstrcpy(s, getstring(argv[0]));
 	i = getint(argv[2], 0, MAXSTRLEN);
@@ -583,7 +583,7 @@ void fun_right(void) {
 	char *s, *p1, *p2;
 	getargs(&ep, 3, ",");
 
-	if(argc != 3) error("Argument count");
+	if(argc != 3) StandardError(2);//error("Argument count");
 	s = getstring(argv[0]);
 	nbr = getint(argv[2], 0, MAXSTRLEN);
 	if(nbr > *s) nbr = *s;											// get the number of chars to copy
@@ -632,7 +632,7 @@ void fun_mid(void) {
 		nbr = MAXSTRLEN;											// default to all chars
 	}
 	else
-		error("Argument count");
+		StandardError(2);//error("Argument count");
 
 	s = getstring(argv[0]);											// the string
 	spos = getint(argv[2], 1, MAXSTRLEN);						    // the mid position
@@ -770,7 +770,7 @@ void fun_eval(void) {
     MtoC(st);                                                       // and convert to a C string
     inpbuf[0] = 'r'; inpbuf[1] = '=';                               // place a dummy assignment in the input buffer to keep the tokeniser happy
     strcpy(inpbuf + 2, st);
-    multi=false;
+    //multi=false;
     tokenise(true);                                                 // and tokenise it (the result is in tknbuf)
     strcpy(st, tknbuf + 3);
     targ = T_NOTYPE;
@@ -823,10 +823,10 @@ void fun_str(void) {
     char ch, *p;
 
     getargs(&ep, 7, ",");
-    if((argc & 1) != 1) error("Syntax");
+    if((argc & 1) != 1) SyntaxError();
     t = T_NOTYPE;
     p = evaluate(argv[0], &f, &i64, &s, &t, false);                 // get the value and type of the argument
-    if(!(t & T_INT || t & T_NBR)) error("Expected a number");
+    if(!(t & T_INT || t & T_NBR)) StandardError(10);//error("Expected a number");
     m = 0; n = STR_AUTO_PRECISION; ch = ' ';
     if(argc > 2) m = getint(argv[2], -128, 128);                    // get the number of digits before the point
     if(argc > 4) n = getint(argv[4], -20, 20);                      // get the number of digits after the point
@@ -863,7 +863,7 @@ void fun_string(void) {
     void *p;
     
     getargs(&ep, 3, ",");
-    if(argc != 3) error("Syntax");
+    if(argc != 3) SyntaxError();
 
     i = getint(argv[0], 0, MAXSTRLEN);
     p = DoExpression(argv[2], &t);                                  // get the value and type of the argument
@@ -922,12 +922,37 @@ void fun_lcase(void) {
 
 // function (which looks like a pre defined variable) to return the version number
 // it pulls apart the VERSION string to generate the number
+// Beta number 0-49  RC number 50-99
 void fun_version(void){
 	char *p;
+	/* Each step skips the separator that stopped the one before it - a '.', or
+   	   the 'b' of a beta, or the "RC" of a release candidate.  A release has no
+   	   fourth field, so strtol stops on the terminating NUL and p + 1 would read
+   	   PAST THE END of the string literal, parsing whatever the linker happened
+   	   to put there as the beta number.  So check there is something to step
+   	   over.  "6.03.02b8" is unchanged at 6.030208; "6.03.02" is now reliably
+   	   6.0302; "6.04.00RC1" is 6.040051. */
     fret = strtol(VERSION, &p, 10);
     fret += (MMFLOAT)strtol(p + 1, &p, 10) / 100;
     fret += (MMFLOAT)strtol(p + 1, &p, 10) / 10000;
-    fret += (MMFLOAT)strtol(p + 1, &p, 10) / 1000000;
+	/* The fourth field's separator says which kind of pre-release this is:
+	   'b' for a beta, "RC" for a release candidate.  A beta contributes its
+	   own number, so "6.03.02b8" stays 6.030208.  A release candidate is
+	   offset by 50, so "6.04.00RC1" is 6.040051: that puts every RC above
+	   every beta of the same release and gives RC0 a value of its own, while
+	   staying inside the two digits this field owns.  The offset must not
+	   reach 100 - that would carry into the third field's digits and make
+	   RC1 read 6.040101, which is indistinguishable from 6.04.01b1.  The 'C'
+	   has to be stepped over as well - stepping over one character only, as
+	   a beta needs, left strtol looking at "C1", which returns 0 and made
+	   every RCn read alike. */
+    int offset = 0;
+ 	if ((p[0] == 'R' || p[0] == 'r') && (p[1] == 'C' || p[1] == 'c'))
+ 	{
+    	p++;
+  		offset = 50;
+   	}
+    fret += (MMFLOAT)(strtol(p + 1, &p, 10) + offset) / 1000000;
     targ = T_NBR;
 }
 
@@ -1007,7 +1032,7 @@ MMFLOAT arcsinus(MMFLOAT x) {
 // n = ASIN(number)
 void fun_asin(void) {
      MMFLOAT f = getnumber(ep);
-     if(f < -1.0 || f > 1.0) error("Number out of bounds");
+     if(f < -1.0 || f > 1.0) StandardError(11);//error("Number out of bounds");
      if (f == 1.0) {
           fret = PI_VALUE/2;
      } else if (f == -1.0) {
@@ -1024,7 +1049,7 @@ void fun_asin(void) {
 // n = ACOS(number)
 void fun_acos(void) {
      MMFLOAT f = getnumber(ep);
-     if(f < -1.0 || f > 1.0) error("Number out of bounds");
+     if(f < -1.0 || f > 1.0) StandardError(11);//error("Number out of bounds");
      if (f == 1.0) {
           fret = 0.0;
      } else if (f == -1.0) {
@@ -1043,7 +1068,7 @@ void do_max_min(int cmp) {
     int i;
     MMFLOAT nbr, f;
     getargs(&ep, (MAX_ARG_COUNT * 2) - 1, ",");
-    if((argc & 1) != 1) error("Syntax");
+    if((argc & 1) != 1) SyntaxError();
     if(cmp) nbr = -FLT_MAX; else nbr = FLT_MAX;
     for(i = 0; i < argc; i += 2) {
         f = getnumber(argv[i]);
@@ -1069,7 +1094,7 @@ void fun_ternary(void){
     char *s = NULL;
     int t = T_NOTYPE;
 	getargs(&ep,5,",");
-	if(argc!=5)error("Syntax");
+	if(argc!=5)SyntaxError();
 	int which=getnumber(argv[0]);
 	if(which){
 		evaluate(argv[2], &f, &i64, &s, &t, false);
@@ -1089,5 +1114,5 @@ void fun_ternary(void){
 		Mstrcpy(sret, s);                                   // copy the string
 		targ=T_STR;
 		return;
-	} else error("Syntax");
+	} else SyntaxError();
 }

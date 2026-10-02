@@ -126,7 +126,7 @@ void cmd_onewire(void) {
 //        owSearch(p);
 #endif
     else
-        error("Unknown command");
+        StandardError(7);//error("Unknown command");
 }
 
 
@@ -167,7 +167,7 @@ void Init_ds18b20(int pin, int precision) {
 void cmd_ds18b20(void) {
     int pin, precision;
 	getargs(&cmdline, 3,",");
-    if(argc < 1) error("Argument count");
+    if(argc < 1) StandardError(2);//error("Argument count");
 	char code;
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	pin = getinteger(argv[0]);
@@ -249,7 +249,7 @@ void owWrite(char *p) {
 	char *cp;
 
 	getargs(&p, MAX_ARG_COUNT*2,",");
-	if (!(argc & 0x01) || (argc < 7)) error("Argument count");
+	if (!(argc & 0x01) || (argc < 7)) StandardError(2);//error("Argument count");
 	char code;
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	pin = getinteger(argv[0]);
@@ -263,7 +263,7 @@ void owWrite(char *p) {
 	cp = argv[6];
 	skipspace(cp);
 	//if (argc > 7 || (len == 1 && type == 0)) {                    // numeric expressions for data
-		if (len != ((argc - 5) >> 1)) error("Argument count");
+		if (len != ((argc - 5) >> 1)) StandardError(2);//error("Argument count");
 		for (i = 0; i < len; i++) {
 			buf[i] = getinteger(argv[i + i + 6]);
 		}
@@ -296,7 +296,7 @@ void owRead(char *p) {
 	void *ptr = NULL;
 
 	getargs(&p, MAX_ARG_COUNT*2,",");
-	if (!(argc & 0x01) || (argc < 7)) error("Argument count");
+	if (!(argc & 0x01) || (argc < 7)) StandardError(2);//error("Argument count");
 	char code;
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	pin = getinteger(argv[0]);
@@ -307,11 +307,11 @@ void owRead(char *p) {
 	len = getint(argv[4], 1, 255);
 
     // check the validity of the argument list
-    if (len != ((argc - 5) >> 1)) error("Argument count");
+    if (len != ((argc - 5) >> 1)) StandardError(2);//error("Argument count");
     for (i = 0; i < len; i++) {
         ptr = findvar(argv[i + i + 6], V_FIND);
-        if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
-        if (!(vartbl[VarIndex].type & (T_NBR | T_INT)) || vartbl[VarIndex].dims[0] != 0) error("Invalid variable");
+        if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
+        if (!(vartbl[VarIndex].type & (T_NBR | T_INT)) || vartbl[VarIndex].dims[0] != 0)  StandardError(3);//error("Invalid variable");
     }
 
 // set up initial pin status (open drain, output, high)
@@ -363,7 +363,7 @@ void fun_owSearch(void) {
     unsigned char filter=0;
 
 	getargs(&ep, MAX_ARG_COUNT*2,",");
-	if (!(argc & 0x01) || (argc < 3)) error("Argument count");
+	if (!(argc & 0x01) || (argc < 3)) StandardError(2);//error("Argument count");
 	char code;
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	pin = getinteger(argv[0]);
@@ -371,11 +371,11 @@ void fun_owSearch(void) {
 	ow_pinChk(pin);
 
 	flag = getinteger(argv[2]);
-	if (flag < 0 || flag > 31) error("Number out of bounds");
+	if (flag < 0 || flag > 31) StandardError(11);//error("Number out of bounds");
 	if (((flag & 0x01) && flag > 7) || ((flag & 0x04) && flag > 7) || ((flag & 0x08) && flag > 15)) error("Invalid flag combination");
 
 	if ((flag & 0x04) || (flag & 0x10)) {
-        if(argc < 3) error("Argument count");
+        if(argc < 3) StandardError(2);//error("Argument count");
         inp.ser=getinteger(argv[4]);
         for (i = 0; i < 8; i++) {
 			buf.serbytes[7-i] = inp.serbytes[i];
@@ -422,14 +422,14 @@ void fun_owCRC8(void){
 	unsigned char buf[255], uc = 0;
 
 	getargs(&ep, MAX_ARG_COUNT*2,",");								// this is a macro and must be the first executable stmt in a block
-	if (!(argc & 0x01) || (argc < 3)) error("Argument count");
+	if (!(argc & 0x01) || (argc < 3)) StandardError(2);//error("Argument count");
 	len = getinteger(argv[0]);
-	if ((len < 1) || (len > 255)) error("Number out of bounds");
+	if ((len < 1) || (len > 255)) StandardError(11);//error("Number out of bounds");
 
-    if (len != ((argc - 1) >> 1)) error("Argument count");
+    if (len != ((argc - 1) >> 1)) StandardError(2);//error("Argument count");
     for (i = 0; i < len; i++) {
         x = getinteger(argv[i + i + 6]);
-        if (x < 0 || x > 255) error("Number out of bounds");
+        if (x < 0 || x > 255) StandardError(11);//error("Number out of bounds");
         buf[i] = (unsigned char)x;
     }
 	setcrc8(0);
@@ -445,13 +445,13 @@ void fun_owCRC16(void){
 	unsigned short buf[255], us = 0;
 
 	getargs(&ep, MAX_ARG_COUNT*2,",");								// this is a macro and must be the first executable stmt in a block
-	if (!(argc & 0x01) || (argc < 3)) error("Argument count");
+	if (!(argc & 0x01) || (argc < 3)) StandardError(2);//error("Argument count");
 	len = getinteger(argv[0]);
-	if ((len < 1) || (len > 255)) error("Number out of bounds");
-    if (len != ((argc - 1) >> 1)) error("Argument count");
+	if ((len < 1) || (len > 255)) StandardError(11);//error("Number out of bounds");
+    if (len != ((argc - 1) >> 1)) StandardError(2);//error("Argument count");
     for (i = 0; i < len; i++) {
         x = getinteger(argv[i + i + 6]);
-        if (x < 0 || x > 65535) error("Number out of bounds");
+        if (x < 0 || x > 65535) StandardError(11);//error("Number out of bounds");
         buf[i] = (unsigned short)x;
     }
 	setcrc16(0);

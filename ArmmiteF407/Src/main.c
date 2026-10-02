@@ -153,12 +153,13 @@ int ListCnt;
 int MMCharPos;
 int MMPromptPos;
 char LCDAttrib;
-char LCDInvert;
+
 volatile int MMAbort = false;
 int use_uart;
 //_restart_reason
 //unsigned int __attribute__((section(".my_section"))) _excep_dummy; // for some reason persistent does not work on the first variable
 unsigned int __attribute__((section(".my_section"))) _excep_code;  //  __attribute__ ((persistent));  // if there was an exception this is the exception code
+unsigned int __attribute__((section(".my_section"))) _excep_addr;  //  __attribute__ ((persistent));  // and this is the address
 unsigned int __attribute__((section(".my_section"))) _restart_reason;  //  __attribute__ ((persistent));  // and this is the address
 unsigned int __attribute__((section(".my_section"))) _excep_cause;  //  __attribute__ ((persistent));  // and this is the address
 char *InterruptReturn = NULL;
@@ -263,6 +264,21 @@ void InsertLastcmd( char *s);
 
 
 
+  void hardfaultrestart(void)
+  //void HardFault_Handler(void)
+  {
+
+  	if(CurrentLinePtr){
+  	 _excep_code = HARDFAULT_RESTART;
+  	 _excep_addr = CountLines(CurrentLinePtr);
+  	}
+  	  //_excep_code =SCREWUP_TIMEOUT;
+  	//_excep_addr = CountLines(CurrentLinePtr);
+
+  	SoftReset();
+
+  }
+
   /* cleanend() is called from checkabort() at CNTRL+C and also from cmd_end().
    * It is also called from error() before the command prompt is displayed.
    * It is used to clean up any background tasks that are running and may affected
@@ -278,6 +294,7 @@ void InsertLastcmd( char *s);
   	  //int i;
 	  dacclose();
 	  ADCclose();
+	  WDTimer = 0;
     // memset(inpbuf,0,STRINGSIZE);
     // int lastgui=gui_font_height;
   	//SetFont(Option.DefaultFont);
@@ -457,7 +474,7 @@ static void transform_star_command(char *input) {
             } else {
                 *dst++ = *src++;
             }
-            if (dst - tmp >= STRINGSIZE) error("String too long");
+            if (dst - tmp >= STRINGSIZE) StandardError(18);//String too long;
         }
 
         // End with a double quote unless 'src' ended with one.
@@ -466,7 +483,7 @@ static void transform_star_command(char *input) {
         *dst = '\0';
     }
 
-    if (dst - tmp >= STRINGSIZE) error("String too long");
+    if (dst - tmp >= STRINGSIZE) StandardError(18);//String too long;
 
     // Copy transformed string back into the input buffer.
     memcpy(input, tmp, STRINGSIZE);
@@ -576,7 +593,7 @@ int main(void)
   		GPIO_InitStruct.Pull = GPIO_PULLUP;
   		HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
   		//if(!HAL_GPIO_ReadPin(GPIOE,  GPIO_PIN_4) && Option.SerialConDisabled){
-  		if(!HAL_GPIO_ReadPin(GPIOE,  GPIO_PIN_4) && Option.SerialConDisabled &&  (_restart_reason > 7)){
+  		if(!HAL_GPIO_ReadPin(GPIOE,  GPIO_PIN_4) && Option.SerialConDisabled &&  (_restart_reason > 15)){
   			Option.SerialConDisabled=0;
   			SaveOptions();
   		    SoftReset();                                                // this will restart the processor
@@ -593,7 +610,7 @@ int main(void)
   		GPIO_InitStruct.Pull = GPIO_PULLUP;
   		HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
   		//if(!HAL_GPIO_ReadPin(GPIOE,  GPIO_PIN_3)){
-  		if((!HAL_GPIO_ReadPin(GPIOE,  GPIO_PIN_3)) && (_restart_reason > 7) ){
+  		if((!HAL_GPIO_ReadPin(GPIOE,  GPIO_PIN_3)) && (_restart_reason > 15) ){
   			//FlashWriteInit(PROGRAM_FLASH);    //This is included in ResetAllFlash() so is not required here
   			ResetAllFlash();
   			LoadOptions();
@@ -615,7 +632,7 @@ int main(void)
  	  		GPIO_InitStruct.Pull = GPIO_PULLUP;
  	  		HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
  	  		HAL_Delay(300);
- 	  		if(!HAL_GPIO_ReadPin(GPIOC,  GPIO_PIN_13) && Option.SerialConDisabled &&  (_restart_reason > 7)){
+ 	  		if(!HAL_GPIO_ReadPin(GPIOC,  GPIO_PIN_13) && Option.SerialConDisabled &&  (_restart_reason > 15)){
  	  			Option.SerialConDisabled=0;
  	  			SaveOptions();
  	  		    SoftReset();                                                // this will restart the processor
@@ -632,7 +649,7 @@ int main(void)
  	  		GPIO_InitStruct.Pull = GPIO_PULLDOWN;
  	  		HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
  	  		HAL_Delay(300);
- 	  		if((HAL_GPIO_ReadPin(GPIOC,  GPIO_PIN_13)) && (_restart_reason > 7) ){
+ 	  		if((HAL_GPIO_ReadPin(GPIOC,  GPIO_PIN_13)) && (_restart_reason > 15) ){
  	  			//FlashWriteInit(PROGRAM_FLASH);    //This is included in ResetAllFlash() so is not required here
  	  			ResetAllFlash();
  	  		    LoadOptions();
@@ -712,16 +729,20 @@ int main(void)
     InitHeap();
 //    InitFileIO();
     BasicRunning= true; //_excep_addr is persistent. Use to identify a power restart.
-    if( !BasicReset && _restart_reason <= 7)_restart_reason=1;          //Button Reset by default
-    if( _restart_reason > 7)_restart_reason=0;           //Power Reset
+    if( !BasicReset && _restart_reason <= 15){_restart_reason=1;}  //Button Reset by default
+    if( _restart_reason > 15){_restart_reason=0;_excep_addr=0;}           //Power Reset
     if (_excep_code==RESET_COMMAND)_restart_reason=3;    //Command Restart
     if (_excep_code==WATCHDOG_TIMEOUT)_restart_reason=4; //watchdog Restart
     if (_excep_code==SCREWUP_TIMEOUT)_restart_reason=5;  //command timeout Restart
-    if (_excep_code==RESTART_HEAP)_restart_reason=6;     //Heap Restart
+   // if (_excep_code==RESTART_HEAP)_restart_reason=6;     //Heap Restart
+    if (_excep_code==HARDFAULT_RESTART)_restart_reason=6;  //HardFault Restart
+    if (_excep_code==RESTART_ERROR)_restart_reason=7;  //Restart by ON ERROR RESTART
+
 
     ErrorInPrompt = false;
     /********************** Only print the banner if not one of these events  **************/
-    if(!(_excep_code == RESTART_NOAUTORUN || _excep_code == RESET_COMMAND || _excep_code == WATCHDOG_TIMEOUT || _excep_code == SCREWUP_TIMEOUT || _excep_code == RESTART_HEAP)){
+    if(!(_excep_code == RESTART_NOAUTORUN || _excep_code == RESET_COMMAND || _excep_code == WATCHDOG_TIMEOUT || _excep_code == SCREWUP_TIMEOUT
+    		|| _excep_code == RESTART_ERROR /* || _excep_code == RESTART_HEAP*/)){
   	  if(Option.Autorun==0 ){
   		  MMPrintString(MES_SIGNON); //MMPrintString(b);              // print sign on message
 #ifdef PC13RESET
@@ -733,18 +754,43 @@ int main(void)
     if (BasicReset){
     	MMPrintString("!!! MMBasic Reset !!!\r\n" );
     	BasicReset=0;
+    	_excep_addr=0;
+    }
+    // Button Reset doesnot have line number.
+    if( _restart_reason==1)_excep_addr=0;
+
+    if(_excep_code == RESET_COMMAND) {
+    	if(!Option.NoReset){Option.Autorun=0;SaveOptions();}
+    	//_excep_addr=0;
     }
 
-    if(_excep_code == RESTART_HEAP) {
-		MMPrintString("Error: Heap overrun\r\n");
-    }
+   // if(_excep_code == RESTART_HEAP) {
+	//	MMPrintString("Error: Heap overrun\r\n");
+   // }
     if(_excep_code == WATCHDOG_TIMEOUT) {
         WatchdogSet = true;                                 // remember if it was a watchdog timeout
-        MMPrintString("\r\n\nWatchdog timeout\r\n");
+        MMPrintString("\r\n\nWatchdog timeout\r\nLine:");
+        PInt(_excep_addr);PRet();
+        if(!Option.NoReset){Option.Autorun=0;SaveOptions();}
     }
     if(_excep_code == SCREWUP_TIMEOUT) {
-    	   MMPrintString("\r\n\nCommand timeout\r\n");
+    	MMPrintString("\r\n\nCommand timeout\r\nLine:");
+    	PInt(_excep_addr);PRet();
+    	if(!Option.NoReset){Option.Autorun=0;SaveOptions();}
     }
+    if(_excep_code == HARDFAULT_RESTART) {
+        MMPrintString("\r\nHardFault Restart\r\nLine:");
+        PInt(_excep_addr);PRet();
+        if(!Option.NoReset){Option.Autorun=0;SaveOptions();}
+    }
+
+    if(_excep_code == RESTART_ERROR) {
+        MMPrintString("\r\nError Restart\r\nLine:");
+        PInt(_excep_addr);PRet();
+        if(!Option.NoReset){Option.Autorun=0;SaveOptions();}
+    }
+
+
     HAL_DAC_Start(&hdac, DAC_CHANNEL_1);
     HAL_DAC_Start(&hdac, DAC_CHANNEL_2);
     HAL_DAC_SetValue(&hdac,DAC_CHANNEL_1, DAC_ALIGN_12B_R, 2047);
@@ -764,7 +810,7 @@ int main(void)
     if (HAL_TIM_Base_Start_IT(&htim12) != HAL_OK)
     {
       /* Starting Error */
-        error("HAL_TIM_Base_Start_IT");
+        StandardError(38);//HAL_TIM_Base_Start_IT;
     }
     if(setjmp(mark) != 0) {
         // we got here via a long jump which means an error or CTRL-C or the program wants to exit to the command prompt
@@ -783,7 +829,7 @@ int main(void)
 #if defined(TEST_CONFIG)
             CurrentLinePtr = inpbuf;
             strcpy(inpbuf, TEST_CONFIG);
-            multi=false;
+            //multi=false;
             tokenise(true);
             ExecuteProgram(tknbuf);
             memset(inpbuf,0,STRINGSIZE);
@@ -860,6 +906,7 @@ int main(void)
             }
         }
         _excep_code = 0;
+
         PrepareProgram(false);
         if(!ErrorInPrompt && FindSubFun("MM.PROMPT", 0) >= 0) {
             ErrorInPrompt = true;
@@ -879,7 +926,7 @@ int main(void)
             transform_star_command(inpbuf);
             p = inpbuf;
         }
-        multi=false;
+        //multi=false;
         tokenise(true);                                             // turn into executable code
 autorun:
         i=0;
@@ -1551,7 +1598,7 @@ static void MX_TIM1_Init(void)
 	HAL_TIM_MspPostInit(&htim1);
 	if (HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3) != HAL_OK) {
 		/* PWM Generation Error */
-		error("HAL_TIM_PWM_Start");
+		StandardError(33);//HAL_TIM_PWM_Start;
 	}
 	HAL_TIMEx_PWMN_Start(&htim1, TIM_CHANNEL_3);
 }
@@ -2571,7 +2618,7 @@ void executelocal(char *p){
 void SaveProgramToFlash(char *pm, int msg) {
     char *p, endtoken, fontnbr, prevchar = 0, buf[STRINGSIZE];
     int nbr, i, n, SaveSizeAddr;
-    multi=false;
+   // multi=false;
     uint32_t storedupdates[MAXCFUNCTION], updatecount=0, realflashsave;
 
     memcpy(buf, tknbuf, STRINGSIZE);                                // save the token buffer because we are going to use it
@@ -2684,8 +2731,8 @@ void SaveProgramToFlash(char *pm, int msg) {
                      n = 0;
                      for(i = 0; i < 8; i++) {
                          if(!IsxDigit((uint8_t)*p)) error("Invalid hex word");
-                         //if((int)((char *)realflashpointer - ProgMemory) >= PROG_FLASH_SIZE - 5) error("Not enough memory");
-                         if((int)((char *)realflashpointer - ProgMemory) >= Option.ProgFlashSize - 5) error("Not enough memory 7");
+                         //if((int)((char *)realflashpointer - ProgMemory) >= PROG_FLASH_SIZE - 5) StandardError(24);//Not enough memory;
+                         if((int)((char *)realflashpointer - ProgMemory) >= Option.ProgFlashSize - 5) StandardError(24);//Not enough memory;
                          n = n << 4;
                          if(*p <= '9')
                              n |= (*p - '0');
@@ -2780,7 +2827,7 @@ void SaveProgramToFlash(char *pm, int msg) {
                      n = 0;
                      for(i = 0; i < 8; i++) {
                          if(!IsxDigit(*p)) error("Invalid hex word");
-                         if((int)((char *)realflashpointer - ProgMemory) >= Option.ProgFlashSize - 5) error("Not enough memory 7");
+                         if((int)((char *)realflashpointer - ProgMemory) >= Option.ProgFlashSize - 5) StandardError(24);//Not enough memory;
                          n = n << 4;
                          if(*p <= '9')
                              n |= (*p - '0');
@@ -2824,7 +2871,7 @@ void SaveProgramToFlash(char *pm, int msg) {
     exiterror1:
         FlashWriteByte(0); FlashWriteByte(0); FlashWriteByte(0);    // terminate the program in flash
         FlashWriteClose();
-        error("Not enough memory 7");
+        StandardError(24);//Not enough memory;
 }
 
 // get a keystroke from the console.  Will wait forever for input

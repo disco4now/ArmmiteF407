@@ -160,7 +160,7 @@ int ADC_init(int32_t pin)
 		  if (HAL_ADC_Init(&hadc1) != HAL_OK)
 		  {
 			  /* ADC initialization Error */
-			  error("HAL_ADC_Init");
+			  StandardError(31);//HAL_ADC_Init;
 		  }
 
 
@@ -179,7 +179,7 @@ int ADC_init(int32_t pin)
 		  if (HAL_ADC_Init(&hadc2) != HAL_OK)
 		  {
 			  /* ADC initialization Error */
-			  error("HAL_ADC_Init");
+			  StandardError(31);//HAL_ADC_Init;
 		  }
 
 
@@ -199,7 +199,7 @@ int ADC_init(int32_t pin)
 		  if (HAL_ADC_Init(&hadc3) != HAL_OK)
 		  {
 			  /* ADC initialization Error */
-			  error("HAL_ADC_Init");
+			  StandardError(31);//HAL_ADC_Init;
 		  }
 
 
@@ -342,19 +342,19 @@ uint8_t dMAP[16]={81,82,83,84,85,86,87,88,55,56,57,58,59,60,61,62};
 uint8_t eMAP[16]={97,98,1,2,3,4,5,38,39,40,41,42,43,44,45,46};
 int codemap(char code, int pin){
 		if(code=='A' || code=='a'){
-			if(pin>15 || pin<0) error("Invalid pin");
+			if(pin>15 || pin<0) StandardError(22);//Invalid pin;
 			return (int)aMAP[pin];
 		} else if(code=='B' || code=='b'){
-			if(pin>15 || pin<0) error("Invalid pin");
+			if(pin>15 || pin<0) StandardError(22);//Invalid pin;
 			return (int)bMAP[pin];
 		} else if(code=='C' || code=='c'){
-			if(pin>15 || pin<0) error("Invalid pin");
+			if(pin>15 || pin<0) StandardError(22);//Invalid pin;
 			return (int)cMAP[pin];
 		} else if(code=='D' || code=='d'){
-			if(pin>15 || pin<0) error("Invalid pin");
+			if(pin>15 || pin<0) StandardError(22);//Invalid pin;
 			return (int)dMAP[pin];
 		} else if(code=='E' || code=='e'){
-			if(pin>15 || pin<0) error("Invalid pin");
+			if(pin>15 || pin<0) StandardError(22);//Invalid pin;
 			return (int)eMAP[pin];
 		}
 	return 0;
@@ -384,11 +384,11 @@ int codecheck(char *line){
 		if((code=codecheck(cmdline)))cmdline+=2;
 		pin = getinteger(cmdline);
 		if(code)pin=codemap(code, pin);
-	    if(IsInvalidPin(pin)) error("Invalid pin");
+	    if(IsInvalidPin(pin)) StandardError(22);//Invalid pin;
 		while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++;
-		if(!*cmdline) error("Invalid syntax");
+		if(!*cmdline) SyntaxError();//error("Invalid syntax");
 		++cmdline;
-		if(!*cmdline) error("Invalid syntax");
+		if(!*cmdline) SyntaxError();//error("Invalid syntax");
 		value = getinteger(cmdline);
 		ExtSet(pin, value);
 	}
@@ -411,12 +411,12 @@ void fun_pin(void) {
 		  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 		  {
 		    /* Channel Configuration Error */
-			    error("HAL_ADC_ConfigChannel");
+			    StandardError(29);//HAL_ADC_ConfigChannel;
 		  }
 	    if (HAL_ADC_Start(&hadc1) != HAL_OK)
 	    {
 	      /* Start Conversation Error */
-	      error("HAL_ADC_Start");
+	      StandardError(27);//HAL_ADC_Start;
 	    }
 
 	    /*##-4- Wait for the end of conversion #####################################*/
@@ -426,7 +426,7 @@ void fun_pin(void) {
 	    if (HAL_ADC_PollForConversion(&hadc1, 10) != HAL_OK)
 	    {
 	      /* End Of Conversion flag not set on time */
-	        error("HAL_ADC_PollForConversion");
+	        StandardError(28);//HAL_ADC_PollForConversion;
 	    }
 	    else
 	    {
@@ -437,7 +437,7 @@ void fun_pin(void) {
 		if (HAL_ADC_DeInit(&hadc1) != HAL_OK)
 		{
 		    /* ADC de-initialization Error */
-		    error("HAL_ADC_DeInit");
+		    StandardError(30);//HAL_ADC_DeInit;
 		}
 
 
@@ -456,12 +456,12 @@ void fun_pin(void) {
 		  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 		  {
 		    // Channel Configuration Error
-			    error("HAL_ADC_ConfigChannel");
+			    StandardError(29);//HAL_ADC_ConfigChannel;
 		  }
 	    if (HAL_ADC_Start(&hadc1) != HAL_OK)
 	    {
 	      // Start Conversation Error
-	      error("HAL_ADC_Start");
+	      StandardError(27);//HAL_ADC_Start;
 	    }
 
 	    //##-4- Wait for the end of conversion #####################################
@@ -471,7 +471,7 @@ void fun_pin(void) {
 	    if (HAL_ADC_PollForConversion(&hadc1, 10) != HAL_OK)
 	    {
 	      // End Of Conversion flag not set on time
-	        error("HAL_ADC_PollForConversion");
+	        StandardError(28);//HAL_ADC_PollForConversion;
 	    }
 	    else
 	    {
@@ -483,7 +483,7 @@ void fun_pin(void) {
 		if (HAL_ADC_DeInit(&hadc3) != HAL_OK)
 		{
 		    // ADC de-initialization Error
-		    error("HAL_ADC_DeInit");
+		    StandardError(30);//HAL_ADC_DeInit;
 		}
 
 
@@ -502,12 +502,12 @@ void fun_pin(void) {
 		  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
 		  {
 		    /* Channel Configuration Error */
-			    error("HAL_ADC_ConfigChannel");
+			    StandardError(29);//HAL_ADC_ConfigChannel;
 		  }
 	    if (HAL_ADC_Start(&hadc1) != HAL_OK)
 	    {
 	      /* Start Conversation Error */
-	      error("HAL_ADC_Start");
+	      StandardError(27);//HAL_ADC_Start;
 	    }
 
 	    /*##-4- Wait for the end of conversion #####################################*/
@@ -517,7 +517,7 @@ void fun_pin(void) {
 	    if (HAL_ADC_PollForConversion(&hadc1, 10) != HAL_OK)
 	    {
 	      /* End Of Conversion flag not set on time */
-	        error("HAL_ADC_PollForConversion");
+	        StandardError(28);//HAL_ADC_PollForConversion;
 	    }
 	    else
 	    {
@@ -529,7 +529,7 @@ void fun_pin(void) {
 		if (HAL_ADC_DeInit(&hadc1) != HAL_OK)
 		{
 		    /* ADC de-initialization Error */
-		    error("HAL_ADC_DeInit");
+		    StandardError(30);//HAL_ADC_DeInit;
 		}
 
 	    targ = T_NBR;
@@ -546,7 +546,7 @@ void fun_pin(void) {
 	pin = getinteger(ep);
 	if(code)pin=codemap(code, pin);
     if(pin != 0) {  // pin = 0 when we are reading the internal reference voltage (1.2V) go straight to the analog read
-        if(IsInvalidPin(pin)) error("Invalid pin");
+        if(IsInvalidPin(pin)) StandardError(22);//Invalid pin;
         switch(ExtCurrentConfig[pin]) {
             case EXT_DIG_IN:
             case EXT_CNT_IN:
@@ -588,12 +588,12 @@ void fun_pin(void) {
     	if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK)
     	{
     		/* Channel Configuration Error */
-		    error("HAL_ADC_ConfigChannel");
+		    StandardError(29);//HAL_ADC_ConfigChannel;
     	}
     	if (HAL_ADC_Start(&hadc1) != HAL_OK)
     	{
     		/* Start Conversation Error */
-    		error("HAL_ADC_Start");
+    		StandardError(27);//HAL_ADC_Start;
     	}
 
     	/*##-4- Wait for the end of conversion #####################################*/
@@ -603,7 +603,7 @@ void fun_pin(void) {
     	if (HAL_ADC_PollForConversion(&hadc1, 10) != HAL_OK)
     	{
     		/* End Of Conversion flag not set on time */
-    		error("HAL_ADC_PollForConversion");
+    		StandardError(28);//HAL_ADC_PollForConversion;
     	}
     	else
     	{
@@ -616,7 +616,7 @@ void fun_pin(void) {
     	if (HAL_ADC_DeInit(&hadc1) != HAL_OK)
     	{
     		/* ADC de-initialization Error */
-    		error("HAL_ADC_DeInit");
+    		StandardError(30);//HAL_ADC_DeInit;
     	}
 
     	targ = T_NBR;
@@ -631,12 +631,12 @@ void fun_pin(void) {
     	if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK)
     	{
     		/* Channel Configuration Error */
-  		    error("HAL_ADC_ConfigChannel");
+  		    StandardError(29);//HAL_ADC_ConfigChannel;
     	}
     	if (HAL_ADC_Start(&hadc2) != HAL_OK)
     	{
     		/* Start Conversation Error */
-    		error("HAL_ADC_Start");
+    		StandardError(27);//HAL_ADC_Start;
     	}
 
     	/*##-4- Wait for the end of conversion #####################################*/
@@ -646,7 +646,7 @@ void fun_pin(void) {
     	if (HAL_ADC_PollForConversion(&hadc2, 50) != HAL_OK)
     	{
     		/* End Of Conversion flag not set on time */
-    		error("HAL_ADC_PollForConversion");
+    		StandardError(28);//HAL_ADC_PollForConversion;
     	}
     	else
     	{
@@ -659,7 +659,7 @@ void fun_pin(void) {
     	if (HAL_ADC_DeInit(&hadc2) != HAL_OK)
     	{
     		/* ADC de-initialization Error */
-    		error("HAL_ADC_DeInit");
+    		StandardError(30);//HAL_ADC_DeInit;
     	}
 
     	targ = T_NBR;
@@ -674,12 +674,12 @@ void fun_pin(void) {
     		if (HAL_ADC_ConfigChannel(&hadc3, &sConfig) != HAL_OK)
     		{
     			/* Channel Configuration Error */
-    			error("HAL_ADC_ConfigChannel");
+    			StandardError(29);//HAL_ADC_ConfigChannel;
     		}
     		if (HAL_ADC_Start(&hadc3) != HAL_OK)
     		{
     			/* Start Conversation Error */
-    			error("HAL_ADC_Start");
+    			StandardError(27);//HAL_ADC_Start;
     		}
 
     		/*##-4- Wait for the end of conversion #####################################*/
@@ -689,7 +689,7 @@ void fun_pin(void) {
     		if (HAL_ADC_PollForConversion(&hadc3, 50) != HAL_OK)
     		{
     			/* End Of Conversion flag not set on time */
-    			error("HAL_ADC_PollForConversion");
+    			StandardError(28);//HAL_ADC_PollForConversion;
     		}
     		else
     		{
@@ -702,7 +702,7 @@ void fun_pin(void) {
     		if (HAL_ADC_DeInit(&hadc3) != HAL_OK)
     		{
     			/* ADC de-initialization Error */
-    			error("HAL_ADC_DeInit");
+    			StandardError(30);//HAL_ADC_DeInit;
     		}
 
     		targ = T_NBR;
@@ -754,13 +754,13 @@ void cmd_port(void) {
     int i;
 	getargs(&cmdline, NBRPINS * 4, ",");
 
-	if((argc & 0b11) != 0b11) error("Invalid syntax");
+	if((argc & 0b11) != 0b11) SyntaxError();//error("Invalid syntax");
 
     // step over the equals sign and get the value for the assignment
 	while(*cmdline && tokenfunction(*cmdline) != op_equal) cmdline++;
-	if(!*cmdline) error("Invalid syntax");
+	if(!*cmdline) SyntaxError();//error("Invalid syntax");
 	++cmdline;
-	if(!*cmdline) error("Invalid syntax");
+	if(!*cmdline) SyntaxError();//error("Invalid syntax");
 	value = getinteger(cmdline);
 
     for(i = 0; i < argc; i += 4) {
@@ -790,7 +790,7 @@ void fun_port(void) {
 	int pin, nbr, i, value = 0, code, pincode;
 
 	getargs(&ep, NBRPINS * 4, ",");
-	if((argc & 0b11) != 0b11) error("Invalid syntax");
+	if((argc & 0b11) != 0b11) SyntaxError();//error("Invalid syntax");
 
     for(i = argc - 3; i >= 0; i -= 4) {
     	code=0;
@@ -819,7 +819,7 @@ void fun_port(void) {
 void cmd_setpin(void) {
 	int i, pin, value, option = 0;
 	getargs(&cmdline, 7, ",");
-	if(argc%2 == 0 || argc < 3) error("Argument count");
+	if(argc%2 == 0 || argc < 3) StandardError(2);//error("Argument count");
 
     if(checkstring(argv[2], "OFF") || checkstring(argv[2], "0"))
         value = EXT_NOT_CONFIG;
@@ -909,7 +909,7 @@ void cmd_setpin(void) {
 
 	if(value == EXT_INT_HI || value == EXT_INT_LO || value == EXT_INT_BOTH) {
 		// we need to set up a software interrupt
-		if(argc < 5) error("Argument count");
+		if(argc < 5) StandardError(2);//error("Argument count");
         for(i = 0; i < NBRINTERRUPTS; i++) if(inttbl[i].pin == 0) break;
         if(i >= NBRINTERRUPTS) error("Too many interrupts");
         inttbl[i].pin = pin;
@@ -931,7 +931,7 @@ void cmd_pulse(void) {
     MMFLOAT f;
 
 	getargs(&cmdline, 3, ",");
-	if(argc != 3) error("Invalid syntax");
+	if(argc != 3) SyntaxError();//error("Invalid syntax");
 	char code;
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	pin = getinteger(argv[0]);
@@ -939,7 +939,7 @@ void cmd_pulse(void) {
 	if(!(ExtCurrentConfig[pin] == EXT_DIG_OUT || ExtCurrentConfig[pin] == EXT_OC_OUT)) error("Pin | is not an output", pin);
 
     f = getnumber(argv[2]);                                         // get the pulse width
-    if(f < 0) error("Number out of bounds");
+    if(f < 0) StandardError(11);//error("Number out of bounds");
     x = f;                                                          // get the integer portion (in mSec)
     y = (int)((f - (MMFLOAT)x) * 1000.0);                             // get the fractional portion (in uSec)
 
@@ -979,12 +979,12 @@ void fun_pulsin(void) { //allowas timeouts up to 10 seconds
     unsigned int t1, t2;
 
 	getargs(&ep, 7, ",");
-	if((argc &1) != 1 || argc < 3) error("Invalid syntax");
+	if((argc &1) != 1 || argc < 3) SyntaxError();//error("Invalid syntax");
 	char code;
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	pin = getinteger(argv[0]);
 	if(code)pin=codemap(code, pin);
-    if(IsInvalidPin(pin)) error("Invalid pin");
+    if(IsInvalidPin(pin)) StandardError(22);//Invalid pin;
 	if(ExtCurrentConfig[pin] != EXT_DIG_IN) error("Pin | is not an input",pin);
     polarity = getinteger(argv[2]);
 
@@ -1042,16 +1042,16 @@ void cmd_ir(void) {
         }
     } else {
         getargs(&cmdline, 5, ",");
-        if(IrState != IR_CLOSED) error("Already open");
-        if(argc%2 == 0 || argc == 0) error("Invalid syntax");
+        if(IrState != IR_CLOSED) StandardError(14);//error("Already open");
+        if(argc%2 == 0 || argc == 0) SyntaxError();//error("Invalid syntax");
         IrVarType = 0;
         IrDev = findvar(argv[0], V_FIND);
-        if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
-        if(vartbl[VarIndex].type & T_STR)  error("Invalid variable");
+        if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
+        if(vartbl[VarIndex].type & T_STR)   StandardError(3);//error("Invalid variable");
         if(vartbl[VarIndex].type & T_NBR) IrVarType |= 0b01;
         IrCmd = findvar(argv[2], V_FIND);
-        if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
-        if(vartbl[VarIndex].type & T_STR)  error("Invalid variable");
+        if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
+        if(vartbl[VarIndex].type & T_STR)   StandardError(3);//error("Invalid variable");
         if(vartbl[VarIndex].type & T_NBR) IrVarType |= 0b10;
         InterruptUsed = true;
         IrInterrupt = GetIntAddress(argv[4]);							// get the interrupt location
@@ -1062,7 +1062,7 @@ void cmd_ir(void) {
 
 void IrInit(void) {
     writeusclock(0);
-    if(ExtCurrentConfig[IRPIN] >= EXT_COM_RESERVED)  error("Pin | is in use",IRPIN);
+    if(ExtCurrentConfig[IRPIN] >= EXT_COM_RESERVED)  StandardErrorParam(20,IRPIN);
     ExtCfg(IRPIN, EXT_DIG_IN, 0);
     ExtCfg(IRPIN, EXT_COM_RESERVED, 0);
 	IR_InitDef.Pull = GPIO_PULLUP; //set as input with no pullup or down
@@ -1111,14 +1111,14 @@ void cmd_lcd(char *lcd)
 
     if((p = checkstring(lcd, "INIT"))) {
         getargs(&p, 11, ",");
-        if(argc != 11) error("Invalid syntax");
-        if(*lcd_pins) error("Already open");
+        if(argc != 11) SyntaxError();//error("Invalid syntax");
+        if(*lcd_pins) StandardError(14);//error("Already open");
         for(i = 0; i < 6; i++) {
         	code=0;
         	if((code=codecheck(argv[i * 2])))argv[i * 2]+=2;
             lcd_pins[i] = getinteger(argv[i * 2]);
         	if(code)lcd_pins[i]=codemap(code, lcd_pins[i]);
-            if(ExtCurrentConfig[(int)lcd_pins[i]] >= EXT_COM_RESERVED)  error("Pin | is in use",lcd_pins[i]);
+            if(ExtCurrentConfig[(int)lcd_pins[i]] >= EXT_COM_RESERVED)  StandardErrorParam(20,lcd_pins[i]);
             ExtCfg(lcd_pins[i], EXT_DIG_OUT, 0);
             ExtCfg(lcd_pins[i], EXT_COM_RESERVED, 0);
         }
@@ -1153,7 +1153,7 @@ void cmd_lcd(char *lcd)
         int center, pos;
 
         getargs(&lcd, 5, ",");
-        if(argc != 5) error("Invalid syntax");
+        if(argc != 5) SyntaxError();//error("Invalid syntax");
         i = getint(argv[0], 1, 4);
         pos = 1;
         if(checkstring(argv[2], "C8"))
@@ -1235,7 +1235,7 @@ void WS2812(char *q){
         char *p;
         int i, j, bit, nbr=0;
     	getargs(&q, 7, ",");
-        if(argc != 7)error("Argument count");
+        if(argc != 7)StandardError(2);//error("Argument count");
     	p=argv[0];
     	if(toupper(*p)=='O'){
     		T1H=13;
@@ -1258,19 +1258,19 @@ void WS2812(char *q){
     		T0L=14;
     		T1H=11;
     		T1L=9 ;
-    	} else error("Syntax");
+    	} else SyntaxError();
         nbr=getint(argv[4],1,256);
         if(nbr>1){
             ptr1 = findvar(argv[6], V_FIND | V_EMPTY_OK | V_NOFIND_ERR);
             if(vartbl[VarIndex].type & T_INT) {
-                if(vartbl[VarIndex].dims[1] != 0) error("Invalid variable");
+                if(vartbl[VarIndex].dims[1] != 0)  StandardError(3);//error("Invalid variable");
                 if(vartbl[VarIndex].dims[0] <= 0) {		// Not an array
-                    error("Argument 1 must be integer array");
+                    StandardError(15);//error("Argument 1 must be integer array");
                 } else {
                     if((vartbl[VarIndex].dims[0] - OptionBase + 1)<nbr)error("Array size");
                 }
                 dest = (long long int *)ptr1;
-            } else error("Argument 1 must be integer array");
+            } else StandardError(15);//error("Argument 1 must be integer array");
         } else {
             colour=getinteger(argv[6]);
             dest = (long long int *)&colour;
@@ -1279,8 +1279,8 @@ void WS2812(char *q){
     	if((code=codecheck(argv[2])))argv[2]+=2;
     	pin = getinteger(argv[2]);
     	if(code)pin=codemap(code, pin);
-        if(IsInvalidPin(pin)) error("Invalid pin");
-        if(!(ExtCurrentConfig[pin] == EXT_NOT_CONFIG || ExtCurrentConfig[pin] == EXT_DIG_OUT))  error("Pin | is in use",pin);
+        if(IsInvalidPin(pin)) StandardError(22);//Invalid pin;
+        if(!(ExtCurrentConfig[pin] == EXT_NOT_CONFIG || ExtCurrentConfig[pin] == EXT_DIG_OUT))  StandardErrorParam(20,pin);
         ExtCfg(pin, EXT_DIG_OUT, 0);
 		p=GetTempMemory((nbr+1)*colours);
 		uSec(80);
@@ -1318,7 +1318,7 @@ void fun_distance(void) {
     int trig, echo,techo;
 
 	getargs(&ep, 3, ",");
-	if((argc &1) != 1) error("Invalid syntax");
+	if((argc &1) != 1) SyntaxError();//error("Invalid syntax");
 	char code;
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	trig = getinteger(argv[0]);
@@ -1331,7 +1331,7 @@ void fun_distance(void) {
     else
         echo = trig;                                                // they are the same if it is a 3-pin device
     if(IsInvalidPin(trig) || IsInvalidPin(echo)) error("Invalid pin |",echo);
-    if(ExtCurrentConfig[trig] >= EXT_COM_RESERVED || ExtCurrentConfig[echo] >= EXT_COM_RESERVED)  error("Pin | is in use",trig);
+    if(ExtCurrentConfig[trig] >= EXT_COM_RESERVED || ExtCurrentConfig[echo] >= EXT_COM_RESERVED)  StandardErrorParam(20,trig);
     ExtCfg(echo, EXT_DIG_IN, CNPUSET);                              // setup the echo input
     PinSetBit(trig, LATCLR);                                        // trigger output must start low
     ExtCfg(trig, EXT_DIG_OUT, 0);                                   // setup the trigger output
@@ -1375,10 +1375,10 @@ void cmd_keypad(void) {
         KeypadClose();
     else {
         getargs(&cmdline, 19, ",");
-        if(argc%2 == 0 || argc < 17) error("Invalid syntax");
-        if(KeypadInterrupt != NULL) error("Already open");
+        if(argc%2 == 0 || argc < 17) SyntaxError();//error("Invalid syntax");
+        if(KeypadInterrupt != NULL) StandardError(14);//error("Already open");
         KeypadVar = findvar(argv[0], V_FIND);
-        if(vartbl[VarIndex].type & T_CONST) error("Cannot change a constant");
+        if(vartbl[VarIndex].type & T_CONST) StandardError(6);//error("Cannot change a constant");
         if(!(vartbl[VarIndex].type & T_NBR)) error("Floating point variable required");
         InterruptUsed = true;
         KeypadInterrupt = GetIntAddress(argv[2]);					// get the interrupt location
@@ -1391,7 +1391,7 @@ void cmd_keypad(void) {
         	if((code=codecheck(argv[(i + 2) * 2])))argv[(i + 2) * 2]+=2;
         	j = getinteger(argv[(i + 2) * 2]);
         	if(code)j=codemap(code, j);
-            if(ExtCurrentConfig[j] >= EXT_COM_RESERVED)  error("Pin | is in use",j);
+            if(ExtCurrentConfig[j] >= EXT_COM_RESERVED)  StandardErrorParam(20,j);
             if(i < 4) {
                 ExtCfg(j, EXT_DIG_IN, CNPUSET);
             } else {
@@ -1487,9 +1487,9 @@ void DHT22(char *p) {
 
     // get the two variables
 	temp = findvar(argv[2], V_FIND);
-	if(!(vartbl[VarIndex].type & T_NBR)) error("Invalid variable");
+	if(!(vartbl[VarIndex].type & T_NBR))  StandardError(3);//error("Invalid variable");
 	humid = findvar(argv[4], V_FIND);
-	if(!(vartbl[VarIndex].type & T_NBR)) error("Invalid variable");
+	if(!(vartbl[VarIndex].type & T_NBR))  StandardError(3);//error("Invalid variable");
 
     // get the pin number and set it up
     // get the pin number and set it up
@@ -1497,7 +1497,7 @@ void DHT22(char *p) {
 	if((code=codecheck(argv[0])))argv[0]+=2;
 	pin = getinteger(argv[0]);
 	if(code)pin=codemap(code, pin);
-    if(IsInvalidPin(pin)) error("Invalid pin");
+    if(IsInvalidPin(pin)) StandardError(22);//Invalid pin;
     if(ExtCurrentConfig[pin] != EXT_NOT_CONFIG)  error("Pin is in use");
     ExtCfg(pin, EXT_OC_OUT, 0);
     if(argc==7){
@@ -1624,7 +1624,7 @@ Configure an I/O pin
 void ExtCfg(int pin, int cfg, int option) {
 	int i,edge,pull;
 
-    if(IsInvalidPin(pin)) error("Invalid pin");
+    if(IsInvalidPin(pin)) StandardError(22);//Invalid pin;
 
     CheckPin(pin, CP_IGNORE_INUSE | CP_IGNORE_RESERVED);
 
@@ -1657,7 +1657,7 @@ void ExtCfg(int pin, int cfg, int option) {
 								break;
 
 
-		case EXT_ANA_IN:        if(!(PinDef[pin].mode & ANALOG_IN)) error("Invalid configuration");
+		case EXT_ANA_IN:        if(!(PinDef[pin].mode & ANALOG_IN)) StandardError(21);//Invalid confifguration;
 								ADCbits[pin]=option;
 								break;
 
@@ -1720,13 +1720,13 @@ void ExtCfg(int pin, int cfg, int option) {
                                     INT4Timer = INT4InitTimer = option;  // only used for frequency and period measurement
 									break;
 								}
-				                error("Invalid configuration");		// not an interrupt enabled pin
+				                StandardError(21);//Invalid confifguration;		// not an interrupt enabled pin
 								return;
 
 		case EXT_INT_LO:											// same as digital input, so fall through
 		case EXT_INT_HI:											// same as digital input, so fall through
 		case EXT_INT_BOTH:											// same as digital input, so fall through
-		case EXT_DIG_IN:		if(!(PinDef[pin].mode & DIGITAL_IN)) error("Invalid configuration");
+		case EXT_DIG_IN:		if(!(PinDef[pin].mode & DIGITAL_IN)) StandardError(21);//Invalid confifguration;
 									GPIO_InitDef.Pin = PinDef[pin].bitnbr;
 									GPIO_InitDef.Pull = GPIO_NOPULL; //set as input with no pullup or down
 									if(option==CNPUSET)GPIO_InitDef.Pull = GPIO_PULLUP;
@@ -1736,7 +1736,7 @@ void ExtCfg(int pin, int cfg, int option) {
 									HAL_GPIO_Init(PinDef[pin].sfr, &GPIO_InitDef);
 									break;
 
-		case EXT_DIG_OUT:		if(!(PinDef[pin].mode & DIGITAL_OUT)) error("Invalid configuration");
+		case EXT_DIG_OUT:		if(!(PinDef[pin].mode & DIGITAL_OUT)) StandardError(21);//Invalid confifguration;
 									GPIO_InitDef.Pull = GPIO_NOPULL; //set as input with no pullup or down
 									GPIO_InitDef.Pin = PinDef[pin].bitnbr;
 									GPIO_InitDef.Mode = GPIO_MODE_OUTPUT_PP;
@@ -1744,7 +1744,7 @@ void ExtCfg(int pin, int cfg, int option) {
 									HAL_GPIO_Init(PinDef[pin].sfr, &GPIO_InitDef);
 								break;
 
-		case EXT_OC_OUT:		if(!(PinDef[pin].mode & DIGITAL_OUT)) error("Invalid configuration");
+		case EXT_OC_OUT:		if(!(PinDef[pin].mode & DIGITAL_OUT)) StandardError(21);//Invalid confifguration;
 									GPIO_InitDef.Pull = GPIO_NOPULL; //set as input with no pullup or down
 									GPIO_InitDef.Pin = PinDef[pin].bitnbr;
 									GPIO_InitDef.Mode = GPIO_MODE_OUTPUT_OD;
@@ -1752,7 +1752,7 @@ void ExtCfg(int pin, int cfg, int option) {
 									HAL_GPIO_Init(PinDef[pin].sfr, &GPIO_InitDef);
 								break;
 
-		default:				error("Invalid configuration");
+		default:				StandardError(21);//Invalid confifguration;
 		                        return;
 	}
 	ExtCurrentConfig[pin] = cfg;
@@ -1801,14 +1801,14 @@ void cmd_device(void){
 		int64_t *a1int=NULL;
 		unsigned short *data;
 		getargs(&tp, 5,",");
-		if(!(argc == 5)) error("Argument count");
+		if(!(argc == 5)) StandardError(2);//error("Argument count");
 		num=getint(argv[2],1,10000);
     	char code;
     	if((code=codecheck(argv[0])))argv[0]+=2;
     	pin = getinteger(argv[0]);
     	if(code)pin=codemap(code, pin);
-        if(IsInvalidPin(pin)) error("Invalid pin");
-        if(!(ExtCurrentConfig[pin] == EXT_NOT_CONFIG || ExtCurrentConfig[pin] == EXT_DIG_OUT))  error("Pin | is in use",pin);
+        if(IsInvalidPin(pin)) StandardError(22);//Invalid pin;
+        if(!(ExtCurrentConfig[pin] == EXT_NOT_CONFIG || ExtCurrentConfig[pin] == EXT_DIG_OUT))  StandardErrorParam(20,pin);
         ExtCfg(pin, EXT_DIG_OUT, 0);
         size=parsenumberarray(argv[4],&a1float, &a1int, 3, 1, NULL, false);
         if(size < num)error("Array too small");
@@ -1831,7 +1831,7 @@ void cmd_device(void){
         __enable_irq();
 		return;
 	}
-	error("Syntax");
+	SyntaxError();
 }
 
 /****************************************************************************************************************************
@@ -2107,7 +2107,7 @@ int MIPS16 CheckPin(int pin, int action) {
 }
 
 if(!(action & CP_IGNORE_INUSE) && ExtCurrentConfig[pin] > EXT_NOT_CONFIG && ExtCurrentConfig[pin] < EXT_COM_RESERVED) {
-    if(!(action & CP_NOABORT)) error("Pin | is in use", pin);
+    if(!(action & CP_NOABORT)) StandardErrorParam(20, pin);
     return false;
 }
 
@@ -2119,7 +2119,7 @@ if(!(action & CP_IGNORE_BOOTRES) && ExtCurrentConfig[pin] == EXT_BOOT_RESERVED) 
     return false;
 }
 if(!(action & CP_IGNORE_RESERVED) && ExtCurrentConfig[pin] >= EXT_COM_RESERVED) {
-    if(!(action & CP_NOABORT)) error("Pin | is in use", pin);
+    if(!(action & CP_NOABORT)) StandardErrorParam(20, pin);
     return false;
 }
 
