@@ -133,7 +133,7 @@ extern char OptionExplicit,OptionEscape;                     // true if OPTION E
 extern char DefaultType;                        // the default type if a variable is not specifically typed
 extern char syscheck;
 extern int emptyarray;
-extern int multi;
+//extern int multi;
 
 
 //#if !defined(BOOL_ALREADY_DEFINED)
@@ -256,7 +256,31 @@ extern char tokenTHEN, tokenELSE, tokenGOTO, tokenEQUAL, tokenTO, tokenSTEP, tok
 extern char cmdIF, cmdENDIF, /*cmdEND_IF, */cmdELSEIF, /*cmdELSE_IF, */cmdELSE, cmdLOOP, cmdWHILE, cmdFOR, cmdNEXT, cmdWHILE, cmdENDSUB, cmdLOCAL, cmdSTATIC, cmdENDFUNCTION, cmdDO, cmdSELECT_CASE, cmdCASE, cmdCASE_ELSE, cmdEND_SELECT;
 extern char cmdSUB, cmdFUN, cmdCFUN, cmdCSUB, cmdIRET, cmdComment, cmdEndComment;
 // void error(char *msg) ;
+//void MIPS16 error(char *, ...);
+
+
+/* ============================================================================
+ * Function declarations - Error handling ( From picomites)
+ * ============================================================================ */
+//extern const char *errorstring[];
 void MIPS16 error(char *, ...);
+void SyntaxError(void);
+void StandardError(int n);
+void StandardErrorParam(int n, int m);
+void StandardErrorParamS(int n, char *m);
+void StandardErrorParam2(int n, int m, int l);
+void StandardErrorParam3(int n, int m, int l, int h);
+/*
+
+
+void SyntaxError(void);
+void StandardError(int n);
+void StandardErrorParam(int n, int m);
+void StandardErrorParam2(int n, int m, int l);
+void StandardErrorParam3(int n, int m, int l, int h);
+void StandardErrorParamS(int n, char *m);
+*/
+
 void MIPS16 InitBasic(void);
 int FloatToInt32(MMFLOAT);
 long long int FloatToInt64(MMFLOAT x);

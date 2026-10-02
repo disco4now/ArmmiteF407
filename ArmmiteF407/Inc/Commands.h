@@ -164,8 +164,10 @@ void cmd_execute(void);
 	{ "Const",		T_CMD,				0, cmd_const	},
 	{"Execute", 	T_CMD,				0, cmd_execute	},
 	{ "MID$(",		T_CMD | T_FUN,		0, cmd_mid      },
-	{ "/*",		    T_CMD,				0, cmd_subfun   },
-	{ "*/",		    T_CMD,				0, cmd_null   },
+	//{ "/*",		    T_CMD,				0, cmd_subfun   },
+	//{ "/*",		    T_CMD,				0, cmd_null   },
+	//{ "*/",		    T_CMD,				0, cmd_null   },
+
 
 
 #endif
@@ -211,6 +213,7 @@ struct s_forstack {
 
 extern struct s_forstack forstack[MAXFORLOOPS + 1] ;
 extern int forindex;
+extern  char cmdlinebuff[STRINGSIZE];
 
 struct s_dostack {
     char *evalptr;                          // pointer to the expression to be evaluated

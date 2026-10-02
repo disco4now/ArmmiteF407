@@ -104,7 +104,10 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAXVARS             512                     // 8 + MAXVARLEN + MAXDIM * 2  (ie, 56 bytes) - these do not incl array members
 #define MAXVARHASH				MAXVARS/2
 #define MAXSUBHASH          MAXSUBFUN
-#define STACKLIMIT			0x1000d800				//get this from the map
+#define MINSTACKSIZE 0x2400   //Set to match _Min_Stack_Size  in STM32F407VGT6_FLASH.ld
+#define STACKLIMIT (0x10010000 - MINSTACKSIZE)  // used to check for stackoverflow
+//#define STACKLIMIT			0x1000DC00		// 0x10010000 - 0x2400 (min_stack_size) get this from the Link (LD) file.
+
 // define the maximum number of arguments to PRINT, INPUT, WRITE, ON, DIM, ERASE, DATA and READ
 // each entry uses zero bytes.  The number is limited by the length of a command line
 #define MAX_ARG_COUNT       50

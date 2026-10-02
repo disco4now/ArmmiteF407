@@ -100,7 +100,7 @@ void fun_mmcharheight(void);
 	{ "Font",           T_CMD,                      0, cmd_font	},
 	{ "Colour",         T_CMD,                      0, cmd_colour	},
 //	{ "Color",          T_CMD,                      0, cmd_colour	},
-	{ "Bezier",         T_CMD,                      0, cmd_bezier	},
+//	{ "Bezier",         T_CMD,                      0, cmd_bezier	},
 	{ "Arc",            T_CMD,                      0, cmd_arc	},
 	{ "Polygon",        T_CMD,                  	0, cmd_polygon	},
 #endif

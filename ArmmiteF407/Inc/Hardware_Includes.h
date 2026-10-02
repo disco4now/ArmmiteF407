@@ -109,6 +109,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     // used to control the processor reset
    // extern unsigned int _excep_dummy;//  __attribute__ ((persistent)); // for some reason persistent does not work on the first variable
     extern unsigned int _excep_code;//  __attribute__ ((persistent));  // if there was an exception this is the exception code
+    extern unsigned int _excep_addr;//  __attribute__ ((persistent));  // and this is the address
     extern unsigned int _restart_reason;//  __attribute__ ((persistent));  // and this is the address
     extern void PRet(void);
     extern void PInt(int n);
@@ -166,7 +167,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ILI9488         19
 #define ILI9481         20
 #define ILI9341		    21
-//#define ILI9486         22
+#define ST7796S         22
 #define SPI_PANEL_END   22             // less than or equal SPI_PANEL_END is SPI panel
 
 #define P16_PANEL_START 23
@@ -186,14 +187,17 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define WATCHDOG_TIMEOUT    9998                                // reset caused by the watchdog timer
 #define PIN_RESTART         9997                                // reset caused by entering 0 at the PIN prompt
 #define RESTART_NOAUTORUN   9996                                // reset required after changing the LCD or touch config
-#define RESTART_HEAP		9995
+//#define RESTART_HEAP		9995
 #define RESTART_DOAUTORUN	9994
 #define SCREWUP_TIMEOUT    	9993                                // reset caused by the execute timer
+#define HARDFAULT_RESTART  	9992
+#define RESTART_ERROR       9991
 #define SD_SLOW_SPI_SPEED 0
 #define SD_FAST_SPI_SPEED 1
 #define LCD_SPI_SPEED    2                                   // the speed of the SPI bus when talking to an SPI LCD display controller
-#define TOUCH_SPI_SPEED 3
-#define NONE_SPI_SPEED 4
+#define LCDREAD_SPI_SPEED    3                                  // the speed of the SPI bus when reading an SPI LCD display controller
+#define TOUCH_SPI_SPEED 4
+#define NONE_SPI_SPEED 5
 #define IsxDigit(a) isxdigit((uint8_t)a)
 #define IsDigit(a) isdigit((uint8_t)a)
 #define IsAlpha(a) isalpha((uint8_t)a)

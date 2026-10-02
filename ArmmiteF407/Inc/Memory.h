@@ -102,6 +102,7 @@ typedef enum _M_Req {M_PROG, M_VAR} M_Req;
 
 extern void m_alloc(int size);
 extern void *GetMemory(size_t msize);
+extern void *GetSystemMemory(int  msize);
 extern void *GetTempMemory(int NbrBytes);
 extern void *GetTempStrMemory(void);
 extern void ClearTempMemory(void);
@@ -111,11 +112,11 @@ extern void InitHeap(void);
 extern char *HeapBottom(void);
 extern int FreeSpaceOnHeap(void);
 
-extern unsigned int _stack;
-extern unsigned int _splim;
-extern unsigned int _heap;
-extern unsigned int _min_stack_size;
-extern unsigned int _text_begin;
+//extern unsigned int _stack;
+//extern unsigned int _splim;
+//extern unsigned int _heap;
+//extern unsigned int _min_stack_size;
+//extern unsigned int _text_begin;
 extern  uint32_t SavedMemoryBufferSize;
 extern int MemSize(void *addr);
 extern void FreeMemorySafe(void **addr);
@@ -138,8 +139,8 @@ extern void *RAMBase;
 //The hashed INTEGER and FLOAT variables are in the CCRAM
 //Look in the MAP file to see where vartbl is located and set these definitions
 //so the POKE is allowed to these addresses.
-#define VARTBLRAMBASE         	0x100039c0
-#define VARTBLRAMEND         	0x1000a9c0
+#define VARTBLRAMBASE         	0x10003600
+#define VARTBLRAMEND         	0x1000a600
 
 // other (minor) memory management parameters
 #define RAMPAGESIZE        256                                         // the allocation granuality

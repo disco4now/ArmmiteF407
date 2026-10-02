@@ -77,6 +77,7 @@ extern "C" {
 /* Includes ------------------------------------------------------------------*/
 #include "stm32f4xx_hal.h"
 
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 void dump(char *p, int nbr,int page);
@@ -166,7 +167,9 @@ extern void MMPrintString(char* s);
 #define TM_ID_GetUnique32(x)     ((x >= 0 && x < 3) ? (*(__IO uint32_t *) (ID_UNIQUE_ADDRESS + 4 * (x))) : 0)
 #define TM_ID_GetUnique64(x)     ((x >= 0 && x < 1) ? (*(__IO uint64_t *) (ID_UNIQUE_ADDRESS + 8 * (x))) : 0)
 #define CONSOLE_RX_BUF_SIZE 512  //512
-#define CONSOLE_TX_BUF_SIZE 1024  //1024            // this is made a large size so that the serial console does not slow down the USB and LCD consoles
+//#define CONSOLE_TX_BUF_SIZE 1024  //1024            // this is made a large size so that the serial console does not slow down the USB and LCD consoles
+//#define CONSOLE_TX_BUF_SIZE 256  //1024            // this is made a large size so that the serial console does not slow down the USB and LCD consoles
+#define CONSOLE_TX_BUF_SIZE 1792  //1024            // this is made a large size so that the serial console does not slow down the USB and LCD consoles
 #define BREAK_KEY           3                       // the default value (CTRL-C) for the break key.  Reset at the command prompt.
 #define forever 1
 #define true	1

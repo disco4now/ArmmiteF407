@@ -49,7 +49,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //** SD CARD INCLUDES ***********************************************************
 #include "ff.h"
 #include "diskio.h"
-
+#include <stdbool.h>
 
 
 /**********************************************************************************
@@ -110,6 +110,8 @@ void fun_dir(void);
     extern int BasicFileOpen(char *fname, int fnbr, int mode);
     extern void FileClose(int fnbr);
     extern void ForceFileClose(int fnbr);
+
+    extern int FileGetData(int fnbr, void *buff, int count, unsigned int *read);
     extern char FileGetChar(int fnbr);
     extern char FilePutChar(char c, int fnbr);
     extern void FilePutStr(int count, char *c, int fnbr);
@@ -130,9 +132,25 @@ void fun_dir(void);
     extern int WAVcomplete;
     extern int WAV_fnbr;
     extern FRESULT FSerror;
+    extern int BMPfnbr;
+
     extern int ExistsFile(char *p);
     extern int ExistsDir(char *p);
     #define WAV_BUFFER_SIZE 8192
     extern int OptionFileErrorAbort;
+
+    typedef struct
+    {
+            int width;
+            int height;
+            int bitsPerPixel;
+            int linesProcessed;
+            bool success;
+            char errorMsg[256];
+    } BMP_Result;
+    extern bool (*linecallback)(int *imagewidth, int *imageheight, uint32_t *linedata, int *linenumber);
+    extern BMP_Result decodeBMP(bool topdown);
+    void decodeBMPheader(int *width, int *height);
+
 
 #endif

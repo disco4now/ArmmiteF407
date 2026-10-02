@@ -44,11 +44,12 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //#define DEBUGMODE
 
-#define VERSION         "5.07.02b4"
+#define VERSION         "5.07.02b6"
 #define MES_SIGNON  "ARMmite MMBasic Version " VERSION
-#define YEAR		"2011-2025"			    // and the year
-#define YEAR2       "2016-2025"
-#define COPYRIGHT  "\r\nCopyright " YEAR " Geoff Graham\r\nCopyright " YEAR2 " Peter Mather\r\n"
+#define YEAR		"2011-2026"			    // and the year
+#define YEAR2       "2016-2026"
+#define YEAR3       "2025-2026"
+#define COPYRIGHT  "\r\nCopyright " YEAR " Geoff Graham\r\nCopyright " YEAR2 " Peter Mather\r\nCopyright " YEAR3 " Gerry Allardice\r\n"
 
 // Beta 2 SPIClose() added before AppendLibrary incase left open by flash write fail
 //        multiline comments
@@ -66,6 +67,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
   // debugging options
   //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 
   // #define DEBUGMODE                     // enable debugging macros (with reduced program memory for the Micromite)

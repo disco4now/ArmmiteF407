@@ -83,48 +83,71 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define PROGRAM_FLASH 1
 
 struct option_s {
+	//0
     char Autorun;
     char Tab;
     char Restart;
     char Listcase;
+    //1
     char Height;
     char Width;
     char  ColourCode;
     char DISPLAY_TYPE;
+    //2
     char DISPLAY_ORIENTATION;
     unsigned char TOUCH_CS;
     unsigned char TOUCH_IRQ; //10
     char TOUCH_SWAPXY;
-    // for the SPI LCDs
+
+    //3 for the SPI LCDs
     unsigned char LCD_CD;
     unsigned char LCD_CS;
     unsigned char LCD_Reset;
     char SerialConDisabled;
+    //4
     char SSDspeed;
     char DISPLAY_CONSOLE;
     char DefaultFont;
     char KeyboardConfig;
+    //5
     unsigned char TOUCH_Click;  //20
     char DefaultBrightness;         // default backlight brightness
     char SerialPullup;
     char fulltime;
+    //6
     char Refresh;
     unsigned char FLASH_CS;
     unsigned char NoScroll;         //NoScroll from picomites added @beta3
-    unsigned char dummy;        //27
-    short MaxCtrls;       //28        2  // maximum number of controls allowed
-    short RTC_Calibrate;  //32  (30)bytes  2
-    int DISPLAY_WIDTH;    //36  (32)      4
-    int DISPLAY_HEIGHT;   //40  (36)     4
-    uint32_t  PIN;        //44  (40)      4
-    uint32_t  Baudrate;   //48  (44)      4
-    MMFLOAT TOUCH_XSCALE; //56  (48)     8
-    MMFLOAT TOUCH_YSCALE; //64  (56)     8
-    unsigned int ProgFlashSize;    // 64  4 used to store the size of the program flash (also start of the LIBRARY code)
-    int DefaultFC, DefaultBC;      // 68  4  the default colours
-    short  TOUCH_XZERO;            // 72  2
-    short  TOUCH_YZERO; //80 bytes // 74  2
-         //Leaves 4 bytes ie. 76,77,78,79  i.e 4 bytes
+    unsigned char BGR;        //27
+    //7
+    short MaxCtrls;           //28        2  // maximum number of controls allowed
+    short RTC_Calibrate;      //30    2
+    //8
+   // int DISPLAY_WIDTH;     //32  (32)     4
+   // int DISPLAY_HEIGHT;    //36  (36)     4
+    short DISPLAY_WIDTH;     //32  (32)     2
+    short DISPLAY_HEIGHT;    //34  (34)     2
+    //9
+    uint32_t  PIN;           //36           4
+    //10
+    uint32_t  Baudrate;      //40        4
+    //11
+    unsigned int ProgFlashSize;  // 44  4 used to store the size of the program flash (also start of the LIBRARY code)
+    //12,13
+    MMFLOAT TOUCH_XSCALE;       //48   8  note! Must be on an 8 byte boundary
+    //14,15
+    MMFLOAT TOUCH_YSCALE;       //56   8  note! Must be on an 8 byte boundary
+    //16
+    int DefaultFC;        // 64  4   the default colours
+    //17
+    int DefaultBC;        // 68  4   the default colours
+    //18
+    short  TOUCH_XZERO;   // 72/73  2
+    short  TOUCH_YZERO;   // 74/75  2
+    //19
+    unsigned char NoReset;    //76    1
+    unsigned char spare0;     //77    1
+    short spare1;             //78/79 2
 
 
 };

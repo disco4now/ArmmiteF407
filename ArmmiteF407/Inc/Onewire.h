@@ -14,7 +14,7 @@ option) any later version.
 
 // These two together take up about 4K of flash and no one seems to use them !!
 //#define INCLUDE_CRC
-#define INCLUDE_1WIRE_SEARCH
+//#define INCLUDE_1WIRE_SEARCH
 
 /**********************************************************************************
  the C language function associated with commands, functions or operators should be
